@@ -1,8 +1,12 @@
-# MCP Agent Platform v1.0.0
+# MCP Server v1.0.0
 
-**Production-grade autonomous agent server** with JSON-RPC MCP endpoint, persistent vector memory, dynamic persona/skill injection, and dual-model support (Grok-4.3 + Ollama).
+**Production-grade autonomous agent server** with JSON-RPC MCP endpoint, persistent vector memory, dynamic persona/skill injection, and dual-model support (Grok + Ollama).
 
 Built and maintained under strict architectural discipline for long-term stability, zero-surprise deployments, and clean separation of concerns.
+
+**Version:** 1.0.0  
+**Date:** 2026-05-18  
+**Status:** Stable foundational release
 
 ---
 
@@ -11,231 +15,286 @@ Built and maintained under strict architectural discipline for long-term stabili
 This platform provides a complete, containerized environment for running a tool-calling AI agent:
 
 - **MCP Server** (`backend/server.py`): FastAPI-based JSON-RPC 2.0 endpoint (`/mcp`) implementing a custom MCP protocol.
-- **27+ Tools**: Core utilities, web search/browse (SearXNG + Browserless), persistent memory, persona management, and skill activation.
-- **Dynamic System Prompts**: `prompt_builder.py` composes versioned prompts on-the-fly, injecting current tools + active persona + active skill (skills have priority).
+- **32 Tools**: Core utilities, web search/browse (SearXNG + Browserless), persistent memory, persona management, skill activation, and utility tools — all auto-discovered from a clean category-based folder structure.
+- **Dynamic System Prompts**: `prompt_builder.py` composes versioned prompts on-the-fly (MD5 hash of persona + skill + tool count), injecting current tools + active persona + active skill (skills have strict priority).
 - **Persistent Memory**: Hybrid SQLite + `sqlite-vec` + Ollama `nomic-embed-text` embeddings for semantic long-term recall.
-- **Gradio UI** (`frontend/gradio_app.py`): Full-featured chat interface with live controls — **never imports backend code**.
-- **CLI Client** (`client.py`): Scriptable agent loops for Grok and Ollama with full tool calling and memory integration.
-- **Docker Compose**: Three services (`mcp-server`, `agent-ui`, `ngrok`) with healthchecks and volume mounts for prompts/data.
+- **Gradio UI** (`frontend/gradio_app.py`): Full-featured chat interface with live controls — **never imports backend code**. Pure dumb client over MCP.
+- **CLI Client** (`client.py`): Scriptable full multi-turn agent loops for Grok and Ollama with memory integration and streaming.
+- **Docker Compose**: Three services (`mcp-server`, `agent-ui`, `ngrok`) with healthchecks, volumes for prompts/data, and clean networking.
 
-The architecture was hardened through multiple painful restructurings. The guiding principle is **long-term maintainability > clever hacks**.
+The architecture was hardened through multiple iterations. The guiding principle is **long-term maintainability and architectural purity > clever hacks**.
 
 ---
 
-## Architecture (Holy Rules)
+## Project Structure (Complete Overview)
+
+```
+MCP Agent Platform v1.0.0
+├── backend/                          # Core server & business logic (Single Source of Truth)
+│   ├── server.py                     # FastAPI JSON-RPC handler (/mcp endpoint)
+│   ├── prompt_builder.py             # Dynamic system prompt engine + versioning
+│   ├── memory.py                     # SQLite + sqlite-vec long-term memory
+│   ├── tools/
+│   │   ├── registry.py               # Tool factory & auto-loader (rglob *.json)
+│   │   ├── loader.py                 # Automatic executor discovery + integrity checks
+│   │   ├── context.py                # AgentContext – single source for persona/skill
+│   │   ├── state.py                  # Centralized active persona/skill storage
+│   │   ├── definitions/              # All 32 tool JSON definitions (category-based)
+│   │   │   ├── core/                 # 11 foundational tools
+│   │   │   ├── memory/               # 8 memory tools
+│   │   │   ├── persona/              # 5 persona tools
+│   │   │   ├── skill/                # 6 skill tools
+│   │   │   ├── web/                  # 2 web tools
+│   │   ├── executors/                # Python implementations (auto-discovered)
+│   │   │   ├── core.py
+│   │   │   ├── memory.py
+│   │   │   ├── persona.py
+│   │   │   ├── skill.py
+│   │   │   └── web.py
+│   │   ├── repositories/             # Persona & Skill content loaders
+│   │   │   ├── persona_repository.py
+│   │   │   └── skill_repository.py
+│   │   └── __init__.py
+│   ├── scripts/
+│   │   └── assign_categories.py      # One-time category assignment helper
+│   └── __init__.py
+├── frontend/                         # Pure UI layer (never imports backend/)
+│   ├── gradio_app.py                 # Full Gradio 6 web interface
+│   ├── client.py                     # CLI agent (Grok + Ollama loops)
+│   └── style.css                     # Custom dark theme
+├── prompts/                          # All persona & skill content
+│   ├── personas/
+│   │   ├── professor.md
+│   │   ├── comedian.md
+│   │   ├── pirate.md
+│   │   └── detective.md
+│   └── skills/
+│       └── comic_glitch_creator.md   # Full ReAct + CoT skill
+├── docker-compose.yml                # 3 services (mcp-server, agent-ui, ngrok)
+├── Dockerfile                        # mcp-server image
+├── Dockerfile.ui                     # agent-ui image
+├── pyproject.toml
+├── requirements.txt
+├── env.example.txt
+└── README.md                         # This file (single source of truth)
+```
+
+**Key Principles visible in the structure:**
+- `backend/` = Server, Tools, Memory, Prompt Logic
+- `frontend/` = Reine UI (kommuniziert **ausschließlich** über `/mcp`)
+- `prompts/` = Personas & Skills (höhere Priorität für Skills)
+- Alles auto-discovered → keine manuellen Registrierungen
+
+---
+
+## Architecture (Holy Rules — Non-Negotiable)
 
 ### Strict Layering
 ```
-backend/          → Server, Tools, Memory, Prompt Logic, Business Rules
-frontend/         → Pure UI layer (Gradio). **MUST NOT** import anything from backend/
+backend/          → Server, Tools (registry + executors), Memory, Prompt Logic, Business Rules, State
+frontend/         → Pure UI layer (Gradio 6). **MUST NOT** import anything from backend/
 ```
 
 - All UI ↔ Backend communication happens **exclusively** over the MCP JSON-RPC endpoint (`POST /mcp`).
-- `prompt_builder.py` is the **Single Source of Truth** for system prompts.
-- `backend/tools/registry.py` + JSON definitions in `definitions/` are the Single Source of Truth for tools.
-- Docker Compose is the source of truth for runtime. Local edits without rebuild are meaningless.
+- `prompt_builder.py` is the **Single Source of Truth** for all system prompts.
+- `backend/tools/registry.py` + JSON definitions in `backend/tools/definitions/` (core/, memory/, persona/, skill/, web/, utility/) are the Single Source of Truth for tools.
+- Docker Compose + `.env` is the source of truth for runtime. Local edits without rebuild are meaningless.
+- `__pycache__` must be deleted in both containers after any structural Python change.
 
-### Critical Components
+### Tool Definitions Folder Structure (for the 32 Tools)
 
-| Component              | File(s)                          | Responsibility |
-|------------------------|----------------------------------|----------------|
-| MCP JSON-RPC Handler   | `backend/server.py`             | `/mcp` endpoint, method routing, auth |
-| Tool Registry & Factory| `backend/tools/registry.py`     | Auto-loads JSON defs + executors from `definitions/` subdirs |
-| Tool Executors         | `backend/tools/executors/*.py`  | `core.py`, `web.py`, `memory.py`, `persona.py`, `skill.py` |
-| Memory Layer           | `backend/memory.py`             | Sessions, chat history, long-term facts + vector search |
-| Prompt Engine          | `backend/prompt_builder.py`     | Dynamic prompt + versioning (MD5 hash of persona+skill+tool count) |
-| Skill Discovery        | `backend/skill_factory.py`      | Scans `prompts/skills/*.md` |
-| Gradio UI              | `frontend/gradio_app.py`        | Chat, controls, **dumb client only** |
-| CLI Agent              | `client.py`                     | Full multi-turn tool loops + memory context |
+```
+backend/tools/definitions/
+├── core/                     # Foundational tools (~11)
+├── memory/                   # 8 tools
+├── persona/                  # 5 tools
+├── skill/                    # 6 tools
+├── web/                      # 2 tools
+└── utility/                  # NEW category for additional tools
+```
 
-### Tool Calling Strategy
+**Rules:**
+- Every tool = exactly one `.json` file with `name`, `description`, `inputSchema`, optional `category`.
+- Executor must exist in `backend/tools/executors/<name>.py` (auto-discovered by `loader.py`).
+- New category? Create folder + (optional) entry in `assign_categories.py`.
+- After changes: Use `validate_tools` or `reload_executors` via MCP.
 
-- **Grok path**: Native `tools` + `tool_choice="auto"` via OpenAI-compatible SDK. Clean and stable.
-- **Ollama path**: Native `tools` parameter + **defensive fallback** — if model emits raw JSON instead of structured tool calls, it is parsed and executed. This was learned the hard way.
-
-**Never** touch the Grok path when fixing Ollama issues.
+### Critical Design Decisions
+- **Tool Calling**: Grok uses native OpenAI-compatible `tools` + `tool_choice="auto"`. Ollama uses native tools + defensive raw-JSON fallback parser. **Never touch Grok path when fixing Ollama.**
+- **Persona/Skill Injection**: Skills > Personas. Both injected via `AgentContext`. Core agent rules (tool usage, truth, safety) **always** override personality instructions.
+- **Memory**: Chat history + long-term semantic facts (vector search). `add_chat_turn` automatically called.
+- **Auto-Discovery**: Tools (JSON + executors), Personas (`prompts/personas/*.md`), Skills (`prompts/skills/*.md`) — zero-config.
+- **Versioning**: Stable MD5 version for every dynamic prompt.
 
 ---
 
-## Available Tools (Current Registry)
+## Complete Feature List (v1.0.0)
 
-**Core (6)**
-- `get_current_time`, `echo`, `get_random_number`, `calculate` (safe AST eval), `get_server_info`, `get_prompt_status`
+### 1. Dual-Model Agent System
+- **Grok Path** (xAI Grok-4.3): Native tool calling, up to 6 turns, automatic tool result injection, context line (`🎭 Persona • 🛠️ Skill`).
+- **Ollama Path** (e.g. llama3.1:latest): Native tools + robust JSON fallback parser. MAX_TURNS=4. Full streaming support.
+- Dynamic model switch instantly refreshes system prompt.
+
+### 2. Dynamic System Prompt Engine (`prompt_builder.py`)
+- Loads base prompt from `prompts/system_prompt_grok.md` or `prompts/system_prompt_ollama.md`.
+- Injects **formatted tool list** grouped by category.
+- Appends **CRITICAL RULES** (tool priority, no hallucination, exact tool names, `execute_skill` preferred).
+- Injects active **Skill** (highest priority) + **Persona**.
+- Computes stable version hash: `persona|skill|tool_count`.
+- `prompts/get_dynamic` returns `{"prompt": "...", "version": "abc123def0"}`.
+
+### 3. 32 Tools (Auto-Loaded & Categorized)
+All tools defined in `backend/tools/definitions/{category}/*.json` + executors in `backend/tools/executors/*.py` (auto-discovered by `loader.py`).
+
+**Core (11)**
+- `get_current_time`, `echo`, `calculate` (safe AST eval), `get_random_number`, `get_server_info` (full status + integrity + tools_by_category), `get_prompt_status`, `get_current_context`, `list_executors`, `reload_executors`, `validate_tools`
 
 **Web (2)**
-- `web_search` (SearXNG), `browse_page` (Browserless or direct with BeautifulSoup)
+- `web_search` (SearXNG), `browse_page` (Browserless or direct BeautifulSoup with cleanup)
 
 **Memory (8)**
-- `store_memory`, `recall_memory`, `list_memories`, `clear_memory`
-- `add_chat_turn`, `list_chat_history`, `clear_chat_history`, `full_reset`
+- `store_memory`, `recall_memory` (vector + text fallback), `list_memories`, `clear_memory`
+- `add_chat_turn`, `list_chat_history`, `clear_chat_history`, `full_reset` (nuclear DB wipe)
 
-**Persona (4)**
-- `list_personas`, `set_active_persona`, `get_active_persona`, `clear_active_persona`
+**Persona (5)**
+- `list_personas`, `set_active_persona`, `get_active_persona`, `clear_active_persona`, `get_persona` (raw content)
 
-**Skill (5)**
-- `list_skills`, `execute_skill` (preferred), `set_active_skill`, `get_active_skill`, `clear_active_skill`
+**Skill (6)**
+- `list_skills`, `execute_skill` (preferred activation — loads full content), `set_active_skill`, `get_active_skill`, `clear_active_skill`, `get_skill` (raw content)
 
-**Total: 27 tools** (loaded dynamically from `definitions/*.json`).
+**Integrity & Debugging**
+- `validate_tools` returns detailed report (missing executors, missing definitions).
+- `reload_executors` hot-reloads without container restart.
+- `get_server_info` shows live integrity status, prompt version, tools_by_category.
 
----
-
-## Personas & Skills
-
-### Personas (`prompts/personas/`)
-- `professor.md` — Patient, precise academic
-- `comedian.md` — Sarcastic stand-up (Rusty Quill)
+### 4. Persona System (4 built-in)
+Located in `prompts/personas/`:
+- `professor.md` — Patient, precise, elegant academic (Professor Elias Thornwood)
+- `comedian.md` — Sarcastic, chaotic stand-up (Rusty Quill)
 - `pirate.md` — Theatrical Captain Silas Blackwake
-- `detective.md` — Calm Inspector Margot Vale
+- `detective.md` — Calm, precise Inspector Margot Vale
 
-### Skills (`prompts/skills/`)
-- `comic_glitch_creator.md` — Full ReAct + Chain-of-Thought workflow for generating 10 detailed comic prompts (Bill Sienkiewicz + GlitchArt style). **Higher priority than any persona**.
+Activation via `set_active_persona` (intensity 1-10) or UI dropdown. Fully injected into every prompt.
 
-**Activation rules** (enforced in prompt):
-1. Skills > Personas
-2. Core Agent rules (tool usage, truth, safety) **always** override personality instructions.
-3. Use `execute_skill` tool to activate structured behavior.
+### 5. Skill System (Higher Priority than Personas)
+Located in `prompts/skills/`:
+- `comic_glitch_creator.md` — Full **ReAct + Chain-of-Thought** workflow for generating exactly 10 unique 75-100 word comic prompts (Bill Sienkiewicz chaotic style + GlitchArt + neon + filters). Strict output format, research loop, reflection phase.
+
+Activation: **Use `execute_skill` tool** (recommended). Once active, full skill content is injected and takes precedence.
+
+### 6. Gradio Web UI (frontend/gradio_app.py)
+- **Status bar** with live tool count + model selector (Grok / Ollama)
+- **Full-height Chat** with avatars, tool-step indicators, context line
+- **📜 System Prompt Accordion** — live viewer + refresh (exact injected prompt + version)
+- **🎭 Persona Control** — dropdown, intensity slider (1-10), Apply/Reset
+- **🛠️ Skill Control** — dropdown, Activate (uses `execute_skill`), Reset
+- **🛠️ Available Tools Accordion** — categorized dropdown + description + "➕ Insert Tool"
+- **🧠 Memory Panel** — Show/Clear LT-Memory, Show/Clear Chat History, Full Nuclear Reset
+- All actions call MCP tools and auto-refresh dynamic prompt.
+- Responsive, custom dark theme (`style.css`).
+
+### 7. CLI Agent (client.py)
+- `uv run client.py grok "query"` — full tool-calling loop + memory context + optional `--stream`
+- `uv run client.py ollama "query" [--model ...] [--stream]`
+- `uv run client.py mcp-list` / `mcp-call tool_name --args '{...}'`
+- Automatically loads recent chat history + relevant long-term memories.
+- Saves every turn via `add_chat_turn`.
+
+### 8. Persistent Memory Layer (backend/memory.py)
+- SQLite + `sqlite-vec` (768-dim nomic-embed-text embeddings).
+- Sessions, chat messages, long-term facts.
+- Semantic recall (vector search with LIKE fallback).
+- `full_reset()` nukes entire DB and recreates clean tables.
+- Auto-initialized. `DEFAULT_SESSION_ID` managed centrally.
+
+### 9. State Management (`backend/tools/state.py` + `context.py`)
+- Centralized `_active_persona` / `_active_skill` (per DEFAULT_SESSION_ID).
+- `AgentContext` class: single source of truth for prompt injection and active names.
+- All persona/skill tools delegate to state manager.
+
+### 10. Docker & Deployment
+- `mcp-server` (8321): FastAPI + uvicorn, healthcheck, volumes for data/ + prompts/
+- `agent-ui` (7860): Gradio, depends on mcp-server
+- `ngrok` (optional): Public HTTPS with custom domain
+- Networks: `app-net` (static IPs)
+- After changes: `docker compose build && docker compose up -d` + `__pycache__` cleanup in both containers.
+
+### 11. Configuration (.env)
+- `XAI_API_KEY`, `XAI_MODEL=grok-4.3`
+- `OLLAMA_URL` (auto-detected), `OLLAMA_MODEL`, `OLLAMA_EMBED_MODEL`
+- `MCP_PUBLIC_URL`, `NGROK_*`
+- `SYSTEM_PROMPT_GROK` / `SYSTEM_PROMPT_OLLAMA`
+- `SEARXNG_URL`, `BROWSERLESS_URL` / `BROWSERLESS_TOKEN`
+
+### 12. Developer Experience & Debugging
+- `assign_categories.py` — one-time category tagging script.
+- `loader.py` — automatic executor discovery + integrity report.
+- `validate_tools` MCP tool for post-change verification.
+- Strict rules enforced everywhere.
+- All errors return structured `{"content": [...], "isError": true}`.
 
 ---
 
 ## Quick Start (Docker — Recommended)
 
 ```bash
-# 1. Prepare environment
 cp env.example.txt .env
-# Edit .env — at minimum set:
-#   XAI_API_KEY=sk-...
-#   OLLAMA_MODEL=llama3.1:latest   (or your preferred local model)
-#   NGROK_AUTHTOKEN=...            (optional but recommended for public URL)
+# Edit .env — minimum: XAI_API_KEY + OLLAMA_MODEL + (optional) NGROK_*
 
-# 2. Start everything
 docker compose up --build -d
 
-# 3. Access points
-# Gradio UI:     http://localhost:7860
-# MCP Endpoint:  http://localhost:8321/mcp   (or your ngrok URL)
-# Health:        curl http://localhost:8321/
+# Access
+# Gradio UI:  http://localhost:7860
+# MCP:        http://localhost:8321/mcp  (or your ngrok URL)
+# Health:     curl http://localhost:8321/
 ```
 
 **After any backend change**:
 ```bash
 docker compose build mcp-server && docker compose up -d mcp-server
+docker compose exec mcp-server find /app -type d -name __pycache__ -exec rm -rf {} +
 ```
 
 **After any frontend change**:
 ```bash
 docker compose build agent-ui && docker compose up -d agent-ui
-```
-
-**Always** after structural changes:
-```bash
-docker compose exec mcp-server find /app -type d -name __pycache__ -exec rm -rf {} +
 docker compose exec agent-ui find /app -type d -name __pycache__ -exec rm -rf {} +
 ```
 
 ---
 
-## Gradio UI Tour
+## Development Guidelines (MCP Projektleiter Doctrine)
 
-The UI is deliberately "dumb" — all intelligence lives behind the MCP endpoint.
-
-**Left Column — Chat**
-- Full conversation with avatar
-- Model switch (Grok ↔ Ollama) — instantly changes system prompt
-- Send button + Enter support
-
-**Right Column — Controls**
-- **📜 System Prompt** (live viewer + refresh) — shows exactly what the model currently sees (including injected persona/skill)
-- **🎭 Persona** — dropdown (auto-loaded), intensity slider, Apply/Reset
-- **🛠️ Skill** — dropdown (auto-loaded), Activate/Reset (uses `execute_skill`)
-- **🛠️ Available Tools** — searchable dropdown + description + "Insert Tool" button (great for testing)
-- **🧠 Memory** — Show/Clear long-term memory, Show/Clear chat history, Full Nuclear Reset
-
-All controls call MCP tools under the hood and refresh the dynamic prompt automatically.
+1. **Never** import from `backend/` inside `gradio_app.py` or any frontend file.
+2. **Always** ask: "Does this require a container rebuild?"
+3. Prefer **small, targeted edits** over large replacements.
+4. Ollama fixes → only in the `else` (Ollama) block. Never touch Grok path.
+5. After structural changes → delete `__pycache__` in **both** containers.
+6. When in doubt: restore known-good state first, then iterate.
+7. New tools: add JSON in `definitions/{category}/` + executor in `executors/`. Zero other changes needed.
+8. New Persona/Skill: drop `.md` file in `prompts/{personas,skills}/`. Auto-discovered.
 
 ---
 
-## CLI Usage Examples
+## Current Tool Integrity (v1.0.0)
 
-```bash
-# Grok with full tool calling + memory
-uv run client.py grok "What is the current server status and latest AI news?"
-
-# Ollama (local) with streaming
-uv run client.py ollama "Store the fact that I prefer dark mode" --stream
-
-# Direct MCP inspection
-uv run client.py mcp-list
-uv run client.py mcp-call get_server_info
-```
+All 32 tools have matching executors. Registry + loader perform automatic validation on startup. `get_server_info` and `validate_tools` provide live reports.
 
 ---
 
-## Environment Variables (`.env`)
+## Why v1.0.0 Exists
 
-| Variable                | Purpose                              | Required |
-|-------------------------|--------------------------------------|----------|
-| `XAI_API_KEY`           | xAI Grok access                      | Yes (for Grok) |
-| `XAI_MODEL`             | `grok-4.3` (default)                 | No |
-| `OLLAMA_URL`            | Auto-detected (Docker vs host)       | No |
-| `OLLAMA_MODEL`          | e.g. `llama3.1:latest`               | Yes (for Ollama) |
-| `OLLAMA_EMBED_MODEL`    | `nomic-embed-text`                   | No |
-| `MCP_PUBLIC_URL`        | Public ngrok URL                     | Recommended |
-| `NGROK_AUTHTOKEN`       | ngrok token                          | For public access |
-| `SYSTEM_PROMPT_GROK`    | Filename in `prompts/`               | No |
-| `SYSTEM_PROMPT_OLLAMA`  | Filename in `prompts/`               | No |
+This release establishes the clean, disciplined foundation after multiple painful restructurings. It eliminates:
+- UI importing backend logic
+- Fragile Ollama handling
+- Unversioned prompts
+- Manual tool registration
 
----
-
-## Development & Debugging Rules (MCP Projektleiter Doctrine)
-
-1. **Never** import anything from `backend/` inside `gradio_app.py` or any frontend file.
-2. **Always** ask: "Does this change require a container rebuild?"
-3. After **any** Python structural change → delete `__pycache__` in **both** containers.
-4. Ollama tool-calling fixes belong **only** in the `else` (Ollama) block of `chat_with_agent` / `run_ollama_agent`. Never touch Grok path.
-5. Prefer **small, targeted edits** over large replacements.
-6. When in doubt, restore a known-good state first, then iterate.
-
----
-
-## Current Status & Known Issues (v1.1.0)
-
-**Working reliably**:
-- Grok tool calling (native)
-- Ollama tool calling (with JSON fallback)
-- Memory (vector + text)
-- Dynamic prompt versioning
-- Persona/Skill activation & injection
-- Docker networking & healthchecks
-
-**Needs attention** (incremental fixes planned):
-- `persona.py:get_active_persona` contains undefined variable references (copy-paste artifact from restructuring).
-- Some executor files in `attachments/` appear duplicated; the canonical versions live under `backend/tools/executors/`.
-- `prompt_builder.py` references `.txt` filenames in env vars while actual files are `.md` — minor.
-- `get_prompt_status` tool has import issues in some contexts.
-
-These are tracked and will be addressed with minimal-invasive patches only.
-
----
-
-## Why This Architecture Exists
-
-Previous versions suffered from:
-- UI importing backend logic → container rebuild hell
-- Over-aggressive global replacements breaking tool calling
-- Ollama treated identically to Grok → fragile JSON output
-- No versioned prompts → silent drift when personas/skills changed
-
-The current design eliminates all of the above.
-
----
-
-## License & Credits
-
-Internal project. Built with ❤️ for reliability and clean engineering.
+Everything is now auto-discovered, centrally versioned, and strictly layered under a scalable folder structure.
 
 **MCP Projektleiter** — Principal Engineer & Technical Project Lead  
 *“Langfristige Stabilität > schnelle Hacks.”*
 
 ---
 
-*Generated with architectural discipline on 2026-05-16.*
+*Clean single-file documentation for v1.0.0 — 2026-05-18*
