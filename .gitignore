@@ -1,12 +1,21 @@
-# Environment & Secrets
+# ============================================
+# MCP Agent Platform - .gitignore
+# ============================================
+
+# Environment & Secrets (sehr wichtig!)
 .env
 .env.*
+*.env
+.env.local
+.env.*.local
+.envrc
 
 # Data & Memory
 data/
 *.db
 *.sqlite
 *.sqlite3
+chat_memory.db
 
 # Python
 __pycache__/
@@ -29,12 +38,14 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+*.pyc
 
 # Virtual Environments
 .venv/
 venv/
 ENV/
 env/
+.conda/
 
 # IDE & Editor
 .idea/
@@ -42,14 +53,24 @@ env/
 *.swp
 *.swo
 *~
+.project
+.pydevproject
 
 # Docker
 docker-compose.override.yml
+docker-compose.*.yml
 
 # Logs
 *.log
 logs/
+*.out
 
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
