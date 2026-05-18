@@ -1,0 +1,20 @@
+{
+  "name": "store_memory",
+  "description": "Store a long-term fact or preference.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "fact": {
+        "type": "string"
+      },
+      "source": {
+        "type": "string",
+        "default": "agent"
+      }
+    },
+    "required": [
+      "fact"
+    ]
+  },
+  "category": "memory"
+}

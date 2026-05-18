@@ -1,0 +1,20 @@
+{
+  "name": "add_chat_turn",
+  "description": "Internal: Add a chat turn.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "role": {
+        "type": "string"
+      },
+      "content": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "role",
+      "content"
+    ]
+  },
+  "category": "memory"
+}

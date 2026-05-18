@@ -1,0 +1,17 @@
+{
+  "name": "get_persona",
+  "description": "Returns the full raw Markdown content of a specific persona. Useful when the agent wants to inspect a persona before activating it.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "persona_name": {
+        "type": "string",
+        "description": "Exact persona name (e.g. 'pirate', 'professor', 'detective')"
+      }
+    },
+    "required": [
+      "persona_name"
+    ]
+  },
+  "category": "persona"
+}

@@ -1,0 +1,9 @@
+{
+  "name": "list_executors",
+  "description": "Returns a list of all dynamically discovered executor functions from the automatic loader.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {}
+  },
+  "category": "core"
+}

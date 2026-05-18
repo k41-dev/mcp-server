@@ -1,0 +1,171 @@
+/* ============================================
+   MCP-Server Gradio Custom Styles v1.0
+   ============================================ */
+
+body {
+    background-color: rgba(30, 41, 59, 0.82);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+}
+
+.gradio-container {
+    background-color: rgba(15, 23, 42, 0.82);
+    border-radius: 18px;
+    border: 1px solid #334155;
+    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.4);
+    min-height: 94vh;
+    padding: 8px;
+}
+
+/* Status bar */
+.status-bar,
+.gradio-container > .gr-row:first-child {
+    background-color: rgba(30, 41, 59, 0.82);
+    border: 1px solid rgba(100, 116, 139, 0.5);
+    border-radius: 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Main three-column layout */
+.main-layout {
+    display: flex !important;
+    gap: 12px;
+    align-items: stretch;
+}
+
+/* Panels */
+.panel,
+.gr-accordion,
+.gr-chatbot,
+#memory_box {
+    background-color: rgba(30, 41, 59, 0.68);
+    border: 1px solid rgba(100, 116, 139, 0.5);
+    border-radius: 14px;
+}
+
+.gr-accordion-header {
+    background-color: rgba(51, 65, 85, 0.88);
+}
+
+.gr-chatbot .bot-message {
+    background-color: rgba(51, 65, 85, 0.85);
+}
+
+.gr-textbox, .gr-textbox textarea {
+    background-color: rgba(30, 41, 59, 0.78);
+}
+
+/* ============================================
+   RESPONSIVE BEHAVIOR
+   ============================================ */
+
+/* Tablet and below → wrap columns */
+@media (max-width: 1024px) {
+    .main-layout {
+        flex-wrap: wrap;
+    }
+}
+
+/* Mobile → full vertical stack */
+@media (max-width: 900px) {
+    .main-layout {
+        flex-direction: column !important;
+        gap: 16px;
+    }
+
+    .menue-column,
+    .chat-column {
+        flex: 1 1 100% !important;
+        width: 100% !important;
+        min-width: 100% !important;
+    }
+
+    .gr-chatbot {
+        height: clamp(420px, 58vh, 620px) !important;
+    }
+
+    /* Make buttons more touch-friendly */
+    button, .gr-button {
+        min-height: 44px;
+        font-size: 0.95rem;
+    }
+}
+
+/* Very small phones */
+@media (max-width: 480px) {
+    .gradio-container {
+        border-radius: 12px;
+        padding: 4px;
+    }
+
+    .gr-chatbot {
+        height: 52vh !important;
+        min-height: 380px;
+    }
+}
+
+/* Improve scrolling in memory + chat */
+#memory_box,
+.gr-chatbot {
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+/* Keep full width */
+.gradio-container, body {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+.tool-dropdown {
+    min-width: 100%;
+}
+
+.tool-info {
+    font-size: 0.85rem;
+    opacity: 0.9;
+}
+
+/* ============================================
+   ENHANCED FULL-HEIGHT CHAT (chatbox + input row)
+   ============================================ */
+
+.chat-column {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 3 1 0% !important;
+    height: 100% !important;           /* Critical */
+    min-height: 0 !important;
+    gap: 8px;                          /* optional breathing room */
+}
+
+/* Chatbox expands to fill everything above the input row */
+.gr-chatbot,
+.gr-chatbot > div,
+.gr-chatbot > div > div {
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden;
+}
+
+/* Input row (message block + Send button) stays compact at the bottom */
+.chat-column .gr-row,
+.chat-column > .gr-row:last-child,
+.chat-column > .gr-row:last-of-type {
+    flex: 0 0 auto !important;
+    flex-shrink: 0 !important;
+    margin-top: auto !important;       /* pushes to bottom */
+    width: 100% !important;
+    padding-top: 8px !important;
+}
+
+/* Safety / cleanup */
+.gr-chatbot {
+    min-height: 400px !important;      /* lowered from 500px for more flexibility */
+}

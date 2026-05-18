@@ -1,0 +1,17 @@
+{
+  "name": "get_skill",
+  "description": "Returns the full raw Markdown content of a specific skill. Useful when the agent needs to inspect a skill before activating it.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "skill_name": {
+        "type": "string",
+        "description": "Exact skill name (e.g. 'comic_glitch_creator')"
+      }
+    },
+    "required": [
+      "skill_name"
+    ]
+  },
+  "category": "skill"
+}

@@ -1,0 +1,20 @@
+{
+  "name": "get_random_number",
+  "description": "Returns a random number between min and max",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "min": {
+        "type": "integer"
+      },
+      "max": {
+        "type": "integer"
+      }
+    },
+    "required": [
+      "min",
+      "max"
+    ]
+  },
+  "category": "core"
+}

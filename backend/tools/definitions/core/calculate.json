@@ -1,0 +1,16 @@
+{
+  "name": "calculate",
+  "description": "Safely evaluate math expressions",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "expression": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "expression"
+    ]
+  },
+  "category": "core"
+}

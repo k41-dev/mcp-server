@@ -1,0 +1,10 @@
+{
+  "name": "get_current_context",
+  "description": "Returns the current AgentContext including active persona, active skill, and summary. Useful for debugging, status checks and UI display.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "category": "core"
+}

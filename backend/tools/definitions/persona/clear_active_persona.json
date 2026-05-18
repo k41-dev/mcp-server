@@ -1,0 +1,10 @@
+{
+  "name": "clear_active_persona",
+  "description": "Clears the currently active persona.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "category": "persona"
+}

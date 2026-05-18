@@ -1,0 +1,10 @@
+{
+  "name": "clear_active_skill",
+  "description": "Clears the currently active skill.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "category": "skill"
+}

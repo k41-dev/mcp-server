@@ -1,0 +1,16 @@
+{
+  "name": "execute_skill",
+  "description": "Aktiviert einen Skill und führt dessen Verhalten aus.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "skill_name": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "skill_name"
+    ]
+  },
+  "category": "skill"
+}

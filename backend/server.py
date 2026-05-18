@@ -1,0 +1,282 @@
+#!/usr/bin/env python3
+""" 
+Custom MCP Server - FastAPI Edition v1.0
+"""
+
+from fastapi import FastAPI, Request, HTTPException, Header
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
+from typing import Any, Dict, List, Optional, Literal
+import json
+import os
+import logging
+from backend.tools import (
+    registry,
+    DEFAULT_SESSION_ID,
+    refresh_default_session,
+    execute_tool
+)
+from backend.tools.registry import registry as _registry
+from backend.prompt_builder import build_dynamic_system_prompt
+
+
+# ====================== LOGGING ======================
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("mcp-log")
+
+
+# ====================== CONFIG ======================
+MCP_API_KEY = os.getenv("MCP_API_KEY", "").strip()
+AUTH_ENABLED = bool(MCP_API_KEY and MCP_API_KEY != "your_mcp_authtoken_here")
+MCP_PUBLIC_URL = os.getenv("MCP_PUBLIC_URL")
+
+
+# ====================== MODELS ======================
+class ToolDefinition(BaseModel):
+    name: str
+    description: str
+    inputSchema: Dict[str, Any]
+
+
+class MCPRequest(BaseModel):
+    jsonrpc: Literal["2.0"] = "2.0"
+    id: Optional[Any] = None
+    method: str
+    params: Optional[Dict[str, Any]] = None
+
+
+class MCPError(BaseModel):
+    code: int
+    message: str
+
+
+class MCPResponse(BaseModel):
+    jsonrpc: Literal["2.0"] = "2.0"
+    id: Optional[Any] = None
+    result: Optional[Dict[str, Any]] = None
+    error: Optional[MCPError] = None
+
+
+class ToolCallParams(BaseModel):
+    name: str
+    arguments: Optional[Dict[str, Any]] = Field(default_factory=dict)
+
+
+# ====================== APP ======================
+app = FastAPI(title="MCP-Server v1.0", version="1.0.0")
+
+
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+
+
+@app.get("/")
+async def root():
+    return {
+        "status": "running",
+        "mcp_endpoint": "/mcp",
+        "auth_enabled": AUTH_ENABLED,
+        "tools": len(registry.get_all_definitions())
+    }
+
+
+@app.get("/.well-known/oauth-authorization-server")
+async def oauth_auth_server():
+    return {"issuer": "https://mcp-server", "authorization_endpoint": "/authorize", "token_endpoint": "/token", "response_types_supported": ["code"], "grant_types_supported": ["authorization_code"], "token_endpoint_auth_methods_supported": ["none"], "scopes_supported": ["mcp"]}
+
+
+@app.get("/.well-known/oauth-protected-resource")
+async def oauth_protected():
+    return {"resource": "/mcp", "authorization_servers": ["https://mcp-server"], "scopes_supported": ["mcp"]}
+
+
+@app.get("/mcp")
+async def mcp_info():
+    return {"message": "MCP endpoint ready – use POST with JSON-RPC"}
+
+
+@app.post("/mcp")
+async def mcp_handler(request: Request, authorization: Optional[str] = Header(None)):
+    if AUTH_ENABLED:
+        if not authorization or not authorization.startswith("Bearer "):
+            raise HTTPException(401, "Missing or invalid Authorization header")
+        if authorization.split(" ", 1)[1] != MCP_API_KEY:
+            raise HTTPException(403, "Invalid API key")
+
+    body = await request.json()
+    logger.info(f"Received MCP request: {json.dumps(body, indent=2)}")
+
+    if not body or not isinstance(body, dict):
+        return MCPResponse(id=None, error=MCPError(code=-32700, message="Empty request"))
+
+    if "method" not in body:
+        if "name" in body:
+            body["method"] = "tools/call"
+        else:
+            return MCPResponse(id=None, error=MCPError(code=-32700, message="Missing method field"))
+
+    try:
+        req = MCPRequest(**body)
+    except Exception as e:
+        return MCPResponse(id=body.get("id"), error=MCPError(code=-32700, message=f"Parse error: {str(e)}"))
+
+    method = req.method
+    params = req.params or {}
+    req_id = req.id
+
+    try:
+        if method == "initialize":
+            result = {"protocolVersion": "2024-11-05", "capabilities": {"tools": {"listChanged": False}}, "serverInfo": {"name": "mcp-fastapi-v1", "version": "1.0.0"}}
+        elif method == "notifications/initialized":
+            result = {}
+        elif method == "tools/list":
+            result = {"tools": [t.model_dump() for t in registry.get_all_definitions()]}
+        elif method == "tools/call":
+            tool = ToolCallParams(**params)
+            result = registry.execute(tool.name, tool.arguments or {})
+        elif method.startswith("tools/"):
+            tool_name = method.split("/", 1)[1]
+            args = params.get("arguments", {}) if isinstance(params, dict) else {}
+            result = registry.execute(tool_name, args)
+        elif method in ["resources/list", "prompts/list"]:
+            result = {"resources": [], "prompts": []}
+        elif method == "ping":
+            result = {"status": "ok"}
+        elif method == "prompts/get_dynamic":
+            model = (params or {}).get("model")
+
+            tools_for_prompt = [
+                {
+                    "function": {
+                        "name": t.name,
+                        "description": t.description,
+                        "parameters": t.inputSchema
+                    },
+                    "category": getattr(t, "category", "core")   # ← NEU
+                }
+                for t in registry.get_all_definitions()
+            ]
+
+            # === Zentrale Abfrage über AgentContext ===
+            try:
+                from backend.tools.context import AgentContext
+                ctx = AgentContext()
+                active_persona = ctx.active_persona
+                active_skill = ctx.active_skill
+            except Exception as e:
+                logger.error(f"Error getting context via AgentContext: {e}")
+                active_persona = None
+                active_skill = None
+
+            try:
+                result = build_dynamic_system_prompt(
+                    model=model,
+                    tools=tools_for_prompt,
+                    active_persona=active_persona,
+                    active_skill=active_skill
+                )
+            except Exception as e:
+                logger.error(f"Error building dynamic prompt: {e}")
+                result = {"prompt": "Error building prompt", "version": "error"}
+
+        elif method == "persona/set_active":
+            persona_name = (params or {}).get("persona_name", "")
+            instructions = (params or {}).get("instructions", "")
+            intensity = (params or {}).get("intensity", 7)
+            
+            from backend.tools import set_active_persona
+            set_active_persona(DEFAULT_SESSION_ID, persona_name, instructions, intensity)
+            result = {"status": "ok", "persona": persona_name}
+
+        elif method == "persona/get_active":
+            persona = get_active_persona(DEFAULT_SESSION_ID)
+            result = {"persona": persona}
+        else:
+            return MCPResponse(id=req_id, error=MCPError(code=-32601, message=f"Method not found: {method}"))
+
+        return MCPResponse(id=req_id, result=result)
+
+    except Exception as e:
+        logger.error(f"Error executing {method}: {e}")
+        return MCPResponse(id=req_id, error=MCPError(code=-32603, message=str(e)))
+
+
+# ====================== DYNAMIC OPENAPI SPEC ======================
+def generate_openapi_spec():
+    tools_list = "\n".join(
+        f"- **{tool.name}**: {tool.description}\n  Input: {json.dumps(tool.inputSchema, indent=2)}"
+        for tool in registry.get_all_definitions()
+    )
+
+    public_url = MCP_PUBLIC_URL
+
+    return {
+        "openapi": "3.1.0",
+        "info": {
+            "title": "MCP-Server",
+            "version": "1.0.0",
+            "description": f"""FastAPI-based MCP server using JSON-RPC 2.0.
+
+**Available Tools:**
+{tools_list}
+
+Use the single POST /mcp endpoint with JSON-RPC 2.0 format.
+""",
+            "contact": {"name": "Grok MCP"}
+        },
+        "servers": [
+            {"url": public_url, "description": "Current ngrok tunnel"}
+        ],
+        "paths": {
+            "/mcp": {
+                "post": {
+                    "summary": "MCP JSON-RPC Endpoint",
+                    "description": "Handles initialize, tools/list, tools/call, and all other MCP methods.",
+                    "operationId": "mcpHandler",
+                    "requestBody": {
+                        "required": True,
+                        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MCPRequest"}}}
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "MCP Response",
+                            "content": {"application/json": {"schema": {"$ref": "#/components/schemas/MCPResponse"}}}
+                        }
+                    }
+                }
+            }
+        },
+        "components": {
+            "schemas": {
+                "MCPRequest": {
+                    "type": "object",
+                    "required": ["jsonrpc", "method"],
+                    "properties": {
+                        "jsonrpc": {"type": "string", "example": "2.0"},
+                        "id": {"type": ["string", "integer", "null"], "example": 1},
+                        "method": {"type": "string", "example": "tools/list"},
+                        "params": {"type": "object"}
+                    }
+                },
+                "MCPResponse": {
+                    "type": "object",
+                    "properties": {
+                        "jsonrpc": {"type": "string"},
+                        "id": {"type": ["string", "integer", "null"]},
+                        "result": {"type": "object"},
+                        "error": {"type": "object", "nullable": True}
+                    }
+                }
+            }
+        },
+        "x-mcp-tools": [tool.model_dump() for tool in registry.get_all_definitions()]
+    }
+
+
+@app.get("/mcp/openapi.json", tags=["OpenAPI"])
+async def get_openapi_spec():
+    return generate_openapi_spec()
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8321)

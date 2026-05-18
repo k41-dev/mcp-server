@@ -1,0 +1,9 @@
+{
+  "name": "reload_executors",
+  "description": "Reloads all executor functions dynamically without restarting the server. Useful during development.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {}
+  },
+  "category": "core"
+}

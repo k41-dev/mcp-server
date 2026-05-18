@@ -1,0 +1,10 @@
+{
+  "name": "list_memories",
+  "description": "List all long-term memories.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "category": "memory"
+}

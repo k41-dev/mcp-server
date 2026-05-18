@@ -1,0 +1,10 @@
+{
+  "name": "get_current_time",
+  "description": "Returns current UTC time in ISO format",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "category": "core"
+}

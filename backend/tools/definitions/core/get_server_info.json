@@ -1,0 +1,10 @@
+{
+  "name": "get_server_info",
+  "description": "Returns server metadata and status",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "category": "core"
+}

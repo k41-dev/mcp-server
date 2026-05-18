@@ -1,0 +1,10 @@
+{
+  "name": "get_active_skill",
+  "description": "Returns the currently active skill.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "category": "skill"
+}
