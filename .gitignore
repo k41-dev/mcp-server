@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # ============================================
 # MCP Agent Platform - .gitignore
 # ============================================
@@ -9,13 +10,21 @@
 .env.local
 .env.*.local
 .envrc
+=======
+# Environment & Secrets
+.env
+.env.*
+>>>>>>> 3e9eb81c27a8a69240d521127f1f0231b104f7b7
 
 # Data & Memory
 data/
 *.db
 *.sqlite
 *.sqlite3
+<<<<<<< HEAD
 chat_memory.db
+=======
+>>>>>>> 3e9eb81c27a8a69240d521127f1f0231b104f7b7
 
 # Python
 __pycache__/
@@ -38,14 +47,12 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-*.pyc
 
 # Virtual Environments
 .venv/
 venv/
 ENV/
 env/
-.conda/
 
 # IDE & Editor
 .idea/
@@ -59,10 +66,16 @@ env/
 # Docker
 docker-compose.override.yml
 docker-compose.*.yml
+=======
+
+# Docker
+docker-compose.override.yml
+
 
 # Logs
 *.log
 logs/
+<<<<<<< HEAD
 *.out
 
 # OS
@@ -74,3 +87,9 @@ desktop.ini
 *.tmp
 *.temp
 .cache/
+=======
+
+# OS
+.DS_Store
+Thumbs.db
+
