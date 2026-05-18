@@ -1,0 +1,10 @@
+{
+  "name": "list_skills",
+  "description": "Lists all available skills.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "category": "skill"
+}

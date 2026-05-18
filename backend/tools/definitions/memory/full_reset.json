@@ -1,0 +1,10 @@
+{
+  "name": "full_reset",
+  "description": "Full reset of memory and chat history.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "category": "memory"
+}

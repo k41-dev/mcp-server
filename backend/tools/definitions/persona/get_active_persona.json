@@ -1,0 +1,10 @@
+{
+  "name": "get_active_persona",
+  "description": "Returns the currently active persona.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "category": "persona"
+}

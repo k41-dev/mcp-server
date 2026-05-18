@@ -1,0 +1,18 @@
+{
+  "name": "recall_memory",
+  "description": "Recall relevant long-term memories.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string"
+      },
+      "limit": {
+        "type": "integer",
+        "default": 8
+      }
+    },
+    "required": []
+  },
+  "category": "memory"
+}

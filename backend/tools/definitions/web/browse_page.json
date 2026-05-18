@@ -1,0 +1,24 @@
+{
+  "name": "browse_page",
+  "description": "Browse any URL and extract content",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "url": {
+        "type": "string"
+      },
+      "timeout": {
+        "type": "integer",
+        "default": 30000
+      },
+      "extract_text": {
+        "type": "boolean",
+        "default": true
+      }
+    },
+    "required": [
+      "url"
+    ]
+  },
+  "category": "web"
+}

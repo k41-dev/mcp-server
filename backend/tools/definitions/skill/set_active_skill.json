@@ -1,0 +1,19 @@
+{
+  "name": "set_active_skill",
+  "description": "Sets the active skill. If content is omitted, the skill file is loaded automatically.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "skill_name": {
+        "type": "string"
+      },
+      "content": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "skill_name"
+    ]
+  },
+  "category": "skill"
+}

@@ -1,0 +1,10 @@
+{
+  "name": "clear_memory",
+  "description": "Clear long-term memory.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "category": "memory"
+}

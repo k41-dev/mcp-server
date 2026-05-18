@@ -1,0 +1,20 @@
+{
+  "name": "set_active_persona",
+  "description": "Sets the active persona.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "persona_name": {
+        "type": "string"
+      },
+      "intensity": {
+        "type": "integer",
+        "default": 7
+      }
+    },
+    "required": [
+      "persona_name"
+    ]
+  },
+  "category": "persona"
+}

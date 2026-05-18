@@ -1,0 +1,15 @@
+{
+  "name": "list_tools_by_category",
+  "description": "Listet alle verfügbaren Tools gruppiert nach Kategorie auf. Optional kann mit dem Parameter 'category' eine bestimmte Kategorie gefiltert werden (z.B. memory, persona, web).",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "category": {
+        "type": "string",
+        "description": "Optionale Kategorie zum Filtern (core, memory, web, persona, skill, debug)"
+      }
+    },
+    "required": []
+  },
+  "category": "core"
+}

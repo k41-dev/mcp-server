@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+"""
+persona.py - Persona Tools (Debug)
+"""
+
+import json
+from pathlib import Path
+from typing import Dict, Any
+from backend.tools.repositories.persona_repository import discover_personas, get_persona_content
+from backend.tools.state import (
+    set_active_persona as _set_active_persona,
+    clear_active_persona as _clear_active_persona,
+)
+from backend.tools.context import AgentContext
+
+def set_active_persona(args: Dict[str, Any]) -> Dict[str, Any]:
+    """Setzt eine Persona (lädt bei Bedarf automatisch aus dem Repository)."""
+    persona_name = args.get("persona_name", "").strip().lower()
+    instructions = args.get("instructions", "").strip()
+    intensity = min(max(int(args.get("intensity", 7)), 1), 10)
+
+    if not persona_name:
+        return {"content": [{"type": "text", "text": "Error: persona_name is required"}], "isError": True}
+
+    # Wenn keine Instructions übergeben wurden → aus Repository laden
+    if not instructions:
+        instructions = get_persona_content(persona_name)
+        if not instructions:
+            return {"content": [{"type": "text", "text": f"Error: Unknown persona '{persona_name}'."}], "isError": True}
+
+    _set_active_persona(persona_name, instructions, intensity)
+
+    return {
+        "content": [{
+            "type": "text",
+            "text": f"✅ Active persona set to: {persona_name} (intensity={intensity})"
+        }]
+    }
+
+
+def get_active_persona(args: Dict[str, Any]) -> Dict[str, Any]:
+    persona = AgentContext().active_persona
+    if persona and isinstance(persona, dict):
+        return {"content": [{"type": "text", "text": json.dumps(persona)}]}
+    else:
+        return {"content": [{"type": "text", "text": "No active persona"}]}
+
+
+def clear_active_persona(args: Dict[str, Any]) -> Dict[str, Any]:
+    _clear_active_persona()
+    return {"content": [{"type": "text", "text": "✅ Active persona cleared."}]}
+
+
+def list_personas(args: Dict[str, Any]) -> Dict[str, Any]:
+    personas = discover_personas()
+    if not personas:
+        return {"content": [{"type": "text", "text": "No personas found in prompts/personas/"}]}
+
+    lines = ["Available Personas:\n"]
+    for p in personas:
+        lines.append(f"- {p['name']}: {p['summary']}")
+    return {"content": [{"type": "text", "text": "\n".join(lines)}]}
+
+
+def get_persona(args: Dict[str, Any]) -> Dict[str, Any]:
+    """Returns the full raw content of a persona (for agent inspection or advanced workflows)."""
+    persona_name = args.get("persona_name", "").strip().lower()
+    if not persona_name:
+        return {"content": [{"type": "text", "text": "Error: persona_name is required"}], "isError": True}
+
+    content = get_persona_content(persona_name)
+    if not content:
+        return {"content": [{"type": "text", "text": f"Error: Persona '{persona_name}' not found."}], "isError": True}
+
+    return {"content": [{"type": "text", "text": content}]}

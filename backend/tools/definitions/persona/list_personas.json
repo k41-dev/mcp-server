@@ -1,0 +1,10 @@
+{
+  "name": "list_personas",
+  "description": "Lists all available personas.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "category": "persona"
+}

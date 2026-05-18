@@ -1,0 +1,10 @@
+{
+  "name": "validate_tools",
+  "description": "Prüft die Konsistenz zwischen registrierten Tool-Definitionen und automatisch entdeckten Executor-Funktionen. Gibt einen detaillierten Report über fehlende Executors oder fehlende Definitions zurück. Sehr nützlich nach Strukturänderungen oder neuen Tools.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "category": "core"
+}

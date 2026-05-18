@@ -1,0 +1,10 @@
+{
+  "name": "clear_chat_history",
+  "description": "Clear chat history.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "category": "memory"
+}
