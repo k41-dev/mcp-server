@@ -57,3 +57,27 @@ class EventTypes:
     SKILL_ACTIVATED = "skill_activated"
     CONTEXT_CLEARED = "context_cleared"
     MEMORY_CLEARED = "memory_cleared"
+
+
+# ====================== DEFAULT LOGGING SUBSCRIBER ======================
+def _log_state_change(data: dict) -> None:
+    """Standard-Subscriber: Protokolliert alle Persona/Skill State-Changes."""
+    event = data.get("event_type", "unknown")
+    timestamp = data.get("timestamp", "")
+
+    if event == EventTypes.PERSONA_ACTIVATED:
+        logger.info(f"🎭 Persona aktiviert: {data.get('persona_name')} (Intensität: {data.get('intensity')})")
+    elif event == EventTypes.SKILL_ACTIVATED:
+        logger.info(f"🛠️ Skill aktiviert: {data.get('skill_name')}")
+    elif event == EventTypes.CONTEXT_CLEARED:
+        logger.info(f"🧹 Context zurückgesetzt: {data.get('cleared', 'unknown')}")
+    else:
+        logger.debug(f"Event empfangen: {event} → {data}")
+
+
+# Automatisch beim Import abonnieren
+subscribe(EventTypes.PERSONA_ACTIVATED, _log_state_change)
+subscribe(EventTypes.SKILL_ACTIVATED, _log_state_change)
+subscribe(EventTypes.CONTEXT_CLEARED, _log_state_change)
+
+logger.info("✅ Event Bus mit Logging-Subscriber initialisiert")
