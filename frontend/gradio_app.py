@@ -719,21 +719,17 @@ def create_ui():
 
                 # === System Prompt Viewer ===
                 with gr.Accordion("📜 System Prompt", open=False, elem_classes=["panel"]):
-                    system_prompt_box = gr.Textbox(
-                        lines=12,
-                        interactive=False,
-                        label="Current Dynamic System Prompt",
-                        show_label=False,
-                        elem_classes=["system-prompt-box"]
-                    )
                     with gr.Row():
-                        refresh_btn = gr.Button("🔄 Refresh", size="sm")   # ← als Variable!
-                    
-                    refresh_btn.click(
-                        get_system_prompt, 
-                        inputs=[model_choice], 
-                        outputs=system_prompt_box
-                    )
+                        system_prompt_box = gr.Code(
+                            language="markdown",
+                            lines=12,
+                            interactive=False,
+                            label="Current Dynamic System Prompt",
+                            show_label=False,
+                            elem_classes=["system-prompt-box"],
+                            elem_id="system_prompt_code",
+                            wrap_lines=False
+                        )
 
                     # === Persona Control ===
                     with gr.Accordion("🎭 Persona", open=False, elem_classes=["panel"]):
