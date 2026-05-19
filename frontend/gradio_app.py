@@ -339,8 +339,45 @@ def chat_with_agent(message: str, history: list, model_choice: str):
 
 # ====================== UI ACTIONS ======================
 def get_status():
-    tools = get_mcp_tools()
-    return f"✅ Connected • {len(tools)} tools" if tools else "❌ MCP Server not reachable"
+    """Erweiterte Status-Anzeige mit Kontext-Informationen."""
+    try:
+        tools = get_mcp_tools()
+        tool_count = len(tools) if tools else 0
+
+        # Aktiven Kontext holen
+        persona_result = call_mcp_tool("get_active_persona", {})
+        skill_result = call_mcp_tool("get_active_skill", {})
+
+        persona_name = "None"
+        skill_name = "None"
+
+        if isinstance(persona_result, str) and "name" in persona_result:
+            try:
+                p = json.loads(persona_result)
+                persona_name = p.get("name", "None")
+            except:
+                pass
+
+        if isinstance(skill_result, str) and "name" in skill_result:
+            try:
+                s = json.loads(skill_result)
+                skill_name = s.get("name", "None")
+            except:
+                pass
+
+        # Prompt Version holen
+        prompt_data = mcp_jsonrpc("prompts/get_dynamic", {"model": "grok"})
+        version = prompt_data.get("version", "unknown") if prompt_data else "unknown"
+
+        status = f"✅ Connected • {tool_count} tools"
+        status += f"\n📜 Prompt: {version}"
+        status += f"\n🎭 Persona: {persona_name}"
+        status += f"\n🛠️ Skill: {skill_name}"
+
+        return status
+
+    except Exception as e:
+        return f"❌ MCP Server nicht erreichbar\nFehler: {str(e)}"
 
 
 def refresh_all(model_choice_value: str):
@@ -826,7 +863,7 @@ def create_ui():
             inputs=[model_choice],
             outputs=[status_box, tool_dropdown, system_prompt_box]
         )
-        
+
     return demo
 
 
