@@ -412,11 +412,7 @@ def get_persona_choices():
             try:
                 data = json.loads(result)
                 if isinstance(data, list):
-                    names = ["Default"] + [
-                        item.get("name", "").lower() 
-                        for item in data 
-                        if item.get("name")
-                    ]
+                    names = ["default"] + [item.get("name", "").lower() for item in data if item.get("name")]
                     return [n for n in names if n]
             except Exception:
                 pass
@@ -426,12 +422,17 @@ def get_persona_choices():
 
 
 def apply_persona(persona_name: str, intensity: int):
-    if not persona_name or persona_name == "Default":
+    if not persona_name or persona_name.lower() == "default":
         return "Please select a persona first."
+
     result = call_mcp_tool("set_active_persona", {
         "persona_name": persona_name,
         "intensity": int(intensity)
     })
+
+    if isinstance(result, str) and ("Error" in result or "error" in result.lower()):
+        return f"❌ Fehler beim Aktivieren von '{persona_name}': {result}"
+
     return f"✅ {persona_name}"
 
 
@@ -449,7 +450,7 @@ def load_initial_personas():
     if "default" not in normalized:
         choices = ["Default"] + choices
     else:
-        # "Default" an erste Stelle setzen
+        # "Default" an erste Stelle setzen + Duplikate entfernen
         choices = ["Default"] + [c for c in choices if c.lower() != "default"]
     
     return gr.update(choices=choices, value="Default")
@@ -462,7 +463,7 @@ def get_skill_choices():
         result = call_mcp_tool("list_skills", {})
         
         if not isinstance(result, str):
-            return ["None"]
+            return []
 
         # JSON-Teil extrahieren (vom ersten [ bis zum letzten ])
         start = result.find("[")
@@ -470,25 +471,24 @@ def get_skill_choices():
 
         if start == -1 or end == 0:
             print("[get_skill_choices] Kein JSON-Array gefunden")
-            return ["None"]
+            return []
 
         json_part = result[start:end]
-
         data = json.loads(json_part)
 
         if isinstance(data, list):
-            names = ["None"] + [
+            names = [
                 item.get("name", "").lower().strip()
                 for item in data
                 if item.get("name")
             ]
             return sorted(set(names))
 
-        return ["None"]
+        return []
 
     except Exception as e:
         print(f"[get_skill_choices] Fehler: {e}")
-        return ["None"]
+        return []
 
 
 def apply_skill(skill_name: str):
@@ -534,6 +534,35 @@ def get_active_skill_display():
         except:
             pass
     return "None"
+
+
+def get_active_context_boxes():
+    """Liefert die aktuell aktiven Persona- und Skill-Namen für die internen Boxen."""
+    try:
+        persona_result = call_mcp_tool("get_active_persona", {})
+        skill_result = call_mcp_tool("get_active_skill", {})
+
+        persona_name = "Default"
+        if isinstance(persona_result, str) and "name" in persona_result:
+            try:
+                p = json.loads(persona_result)
+                if p.get("name"):
+                    persona_name = p["name"].title()
+            except:
+                pass
+
+        skill_name = "None"
+        if isinstance(skill_result, str) and "name" in skill_result:
+            try:
+                s = json.loads(skill_result)
+                if s.get("name"):
+                    skill_name = s["name"].title()
+            except:
+                pass
+
+        return persona_name, skill_name
+    except Exception:
+        return "Default", "None"
 
 
 def get_system_prompt(model_choice: str):
@@ -734,9 +763,10 @@ def create_ui():
                     gr.HTML("""
                     <style>
                     .system-prompt-box {
-                        max-height: 280px !important;     /* Maximale Höhe */
-                        overflow-y: auto !important;      /* Vertikale Scrollbar */
-                        overflow-x: auto !important;      /* Horizontale Scrollbar falls nötig */
+                        max-height: none !important; 
+                        height: auto !important;
+                        overflow-y: auto !important;
+                        overflow-x: auto !important;
                         border-radius: 8px;
                     }
                     .system-prompt-box pre {
@@ -938,6 +968,7 @@ def create_ui():
         demo.load(load_initial_personas, outputs=persona_dropdown)
         demo.load(load_initial_skills, outputs=skill_dropdown)
         demo.load(get_tool_names, outputs=tool_dropdown)
+        demo.load(get_active_context_boxes, outputs=[active_persona_box, active_skill_box])
         
         model_choice.change(get_system_prompt, inputs=[model_choice], outputs=system_prompt_box)
 

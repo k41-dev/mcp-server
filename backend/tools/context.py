@@ -52,31 +52,35 @@ class AgentContext:
         return self.active_persona is not None
 
     # ====================== CONVENIENCE ======================
-
     def get_prompt_injection(self) -> str:
         """Liefert den fertigen Prompt-Injection-String für Persona + Skill.
 
-        Skill hat Vorrang und wird zuerst angehängt.
+        Garantiert, dass beide (falls aktiv) immer enthalten sind.
+        Skill wird zuerst angehängt, Persona danach.
         """
         parts: list[str] = []
 
         if self.active_skill:
             skill = self.active_skill
             parts.append(
-                f"**AKTIVER SKILL: {skill.get('name', 'unknown').upper()}**\n{skill.get('content', '')}"
-            )
-            parts.append(
-                "\n**Hinweis:** Die Anweisungen des aktiven Skills haben Vorrang "
-                "vor dem Persona-Stil, falls es zu Konflikten kommt."
+                f"**AKTIVER SKILL: {skill['name'].upper()}**\n{skill['content']}"
             )
 
         if self.active_persona:
             persona = self.active_persona
             parts.append(
-                f"**AKTIVE PERSONA: {persona.get('name', 'unknown').upper()}**\n{persona.get('instructions', '')}"
+                f"**AKTIVE PERSONA: {persona['name'].upper()}**\n{persona['instructions']}"
+            )
+
+        # Optionaler Hinweis nur, wenn BEIDE aktiv sind
+        if self.active_skill and self.active_persona:
+            parts.append(
+                "**Hinweis:** Der aktive Skill hat Vorrang vor der Persona, "
+                "falls es zu Konflikten kommt."
             )
 
         return "\n\n".join(parts) if parts else ""
+
 
     def get_active_names(self) -> Dict[str, Optional[str]]:
         """Gibt nur die Namen zurück (für Logging / Status)."""
@@ -84,6 +88,7 @@ class AgentContext:
             "persona": self.active_persona.get("name") if self.active_persona else None,
             "skill": self.active_skill.get("name") if self.active_skill else None,
         }
+
 
     def get_context_summary(self) -> str:
         """Kurze, menschenlesbare Zusammenfassung des aktuellen Kontexts."""
@@ -96,6 +101,7 @@ class AgentContext:
             return names["persona"]
         else:
             return "Default (keine Persona/Skill aktiv)"
+
 
     def to_dict(self) -> Dict[str, Any]:
         """Gibt den kompletten aktuellen Kontext als Dictionary zurück.
@@ -111,12 +117,13 @@ class AgentContext:
             "summary": self.get_context_summary(),
         }
 
+
     def __repr__(self) -> str:
         names = self.get_active_names()
         return f"AgentContext(persona={names['persona']}, skill={names['skill']})"
 
-    # ====================== CLASSMETHODS ======================
 
+    # ====================== CLASSMETHODS ======================
     @classmethod
     def current(cls) -> "AgentContext":
         """Gibt die Default-Instanz zurück (bequem für schnelle Zugriffe)."""
