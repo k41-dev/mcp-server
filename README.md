@@ -307,6 +307,19 @@ Since the initial v1.0.0 release, the following stability and maintainability im
 
 These changes significantly improve long-term stability, observability, and developer experience while maintaining full backward compatibility.
 
+---
+
+### Observability, Configuration & Performance Layer (Mai 2026)
+
+Im Rahmen der laufenden Architektur-Härtung wurden folgende zentrale Verbesserungen implementiert:
+
+- **Zentrale Konfiguration** (`backend/config.py`): Alle Umgebungsvariablen sind jetzt in einer immutable `Settings`-Klasse gebündelt. Das erhöht Typsicherheit, Wartbarkeit und Testbarkeit erheblich.
+- **Dependency Injection**: Core Services (`AgentContext`, `Registry`, `Settings`) werden über FastAPI `Depends` injiziert. Dadurch sind Abhängigkeiten explizit und Unit-Tests deutlich einfacher.
+- **Event Bus** (`backend/events.py`): Ein leichter, thread-sicherer Event Bus ermöglicht entkoppelte Reaktionen auf State-Änderungen (Persona/Skill aktiviert oder zurückgesetzt). Standardmäßig sind Logging-Subscriber aktiv.
+- **Umfassende Logging-Schicht**: Detaillierte Logger für Tool-Ausführungen (`mcp.tools`), Memory-Operationen (`mcp.memory`), Prompt-Bau (`mcp.prompt`) und Event Bus (`mcp.events`).
+- **Prompt-Cache mit Auto-Invalidierung** (`backend/prompt_cache.py`): Der dynamisch generierte System-Prompt wird versioniert gecacht. Bei Aktivierung einer neuen Persona oder eines Skills wird der Cache automatisch über den Event Bus invalidiert — Performance-Gewinn bei gleichbleibendem Kontext bei voller Korrektheit.
+
+Diese Maßnahmen verbessern sowohl die **langfristige Wartbarkeit** als auch die **Beobachtbarkeit** des Systems signifikant, ohne die bestehende Architektur zu verletzen.
 
 **MCP Projektleiter** — Principal Engineer & Technical Project Lead  
 *“Langfristige Stabilität > schnelle Hacks.”*

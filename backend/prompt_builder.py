@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 from backend.config import settings
 from backend.tools.context import AgentContext
+from backend.prompt_cache import get_cached_prompt, set_cached_prompt
 import logging
 
 
@@ -146,11 +147,30 @@ def build_dynamic_system_prompt(
 
     version = _compute_prompt_version(active_persona, active_skill, len(tools) if tools else 0)
 
+    # === Prompt-Cache Check ===
+    cached = get_cached_prompt(version)
+    if cached:
+        logger.debug(f"📦 Prompt aus Cache geladen (Version: {version})")
+        return {
+            "prompt": cached,
+            "version": version
+        }
 
-    # === Prompt Build Logging ===
-    persona_name = active_persona.get("name") if active_persona else "None"
-    skill_name = active_skill.get("name") if active_skill else "None"
-    logger.info(f"📜 Prompt gebaut | Version: {version} | Persona: {persona_name} | Skill: {skill_name} | Tools: {len(tools) if tools else 0}")
+    # === Prompt neu bauen + cachen ===
+    full_prompt = base_prompt + tool_section + critical_rules
+
+    ctx = AgentContext()
+    injection = ctx.get_prompt_injection()
+    if injection:
+        full_prompt += "\n\n" + injection
+
+    set_cached_prompt(version, full_prompt)
+
+    # === Logging mit direkter Inline-Berechnung ===
+    p_name = active_persona.get("name") if active_persona else "None"
+    s_name = active_skill.get("name") if active_skill else "None"
+
+    logger.info(f"📜 Prompt gebaut | Version: {version} | Persona: {p_name} | Skill: {s_name} | Tools: {len(tools) if tools else 0}")
 
     return {
         "prompt": full_prompt,
