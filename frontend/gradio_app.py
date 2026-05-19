@@ -803,19 +803,12 @@ def create_ui():
                             apply_btn = gr.Button("Apply Persona", variant="primary", size="sm")
                             reset_btn = gr.Button("Reset Persona", variant="stop", size="sm")
 
-                        active_persona_box = gr.Textbox(
-                            label="Active Persona", 
-                            value="Default", 
-                            interactive=False
-                        )
-
                         load_btn = gr.Button("🔄 Load Personas", size="sm")
 
                         # Wiring
                         apply_btn.click(
                             apply_persona,
-                            inputs=[persona_dropdown, intensity_slider],
-                            outputs=active_persona_box
+                            inputs=[persona_dropdown, intensity_slider]
                         ).then(
                             get_system_prompt,
                             inputs=[model_choice],
@@ -829,8 +822,7 @@ def create_ui():
                         )
 
                         reset_btn.click(
-                            reset_persona,
-                            outputs=active_persona_box
+                            reset_persona
                         ).then(
                             get_system_prompt,
                             inputs=[model_choice],
@@ -863,19 +855,12 @@ def create_ui():
                             apply_skill_btn = gr.Button("Activate Skill", variant="primary", size="sm")
                             reset_skill_btn = gr.Button("Reset Skill", variant="stop", size="sm")
 
-                        active_skill_box = gr.Textbox(
-                            label="Active Skill", 
-                            value="None", 
-                            interactive=False
-                        )
-
                         load_skills_btn = gr.Button("🔄 Load Skills", size="sm")
 
                         # Wiring
                         apply_skill_btn.click(
                             apply_skill,
-                            inputs=[skill_dropdown],
-                            outputs=active_skill_box
+                            inputs=[skill_dropdown]
                         ).then(
                             get_system_prompt,
                             inputs=[model_choice],
@@ -889,8 +874,7 @@ def create_ui():
                         )
 
                         reset_skill_btn.click(
-                            reset_skill,          
-                            outputs=active_skill_box
+                            reset_skill          
                         ).then(
                             get_system_prompt,
                             inputs=[model_choice],
@@ -995,7 +979,6 @@ def create_ui():
         demo.load(load_initial_personas, outputs=persona_dropdown)
         demo.load(load_initial_skills, outputs=skill_dropdown)
         demo.load(get_tool_names, outputs=tool_dropdown)
-        demo.load(get_active_context_boxes, outputs=[active_persona_box, active_skill_box])
         demo.load(get_active_context_boxes, outputs=[active_persona_display, active_skill_display])
         
         model_choice.change(get_system_prompt, inputs=[model_choice], outputs=system_prompt_box)
