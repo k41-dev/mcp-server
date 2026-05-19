@@ -251,29 +251,38 @@ def chat_with_agent(message: str, history: list, model_choice: str):
 
             for _ in range(MAX_TURNS):
                 resp = ollama_client.chat(
-                    model=OLLAMA_MODEL,
-                    messages=messages,
-                    tools=tools if tools else None,
+                model=OLLAMA_MODEL,
+                messages=messages,
+                tools=tools if tools else None,
                 )
 
                 message_obj = resp.get("message", {})
                 content = message_obj.get("content", "") or ""
                 tool_calls = message_obj.get("tool_calls", []) or []
 
-                # Nur noch ein einfacher Fallback (raw JSON)
+                # === Verbesserter raw-JSON Fallback ===
                 if not tool_calls and isinstance(content, str) and content.strip().startswith("{"):
                     try:
                         parsed = json.loads(content.strip())
                         if isinstance(parsed, dict) and parsed.get("name"):
-                            tool_calls = [{
-                                "function": {
-                                    "name": parsed.get("name"),
-                                    "arguments": parsed.get("parameters") or parsed.get("arguments") or {}
-                                }
-                            }]
-                            content = ""
-                    except Exception:
-                        pass
+                            tool_name = parsed.get("name")
+                            # Nur bekannte Tools akzeptieren
+                            if any(t["function"]["name"] == tool_name for t in tools):
+                                args = parsed.get("parameters") or parsed.get("arguments") or {}
+                                if isinstance(args, str):
+                                    try:
+                                        args = json.loads(args)
+                                    except:
+                                        args = {}
+                                tool_calls = [{
+                                    "function": {
+                                        "name": tool_name,
+                                        "arguments": args
+                                    }
+                                }]
+                                content = ""
+                    except Exception as e:
+                        print(f"[Ollama Fallback] JSON parse failed: {e}")
 
                 if tool_calls:
                     messages.append({
@@ -294,13 +303,17 @@ def chat_with_agent(message: str, history: list, model_choice: str):
                                 args = {}
 
                         if tool_name:
-                            result = call_mcp_tool(tool_name, args)
-                            tool_steps.append(f"🔧 `{tool_name}`")
-                            messages.append({"role": "tool", "content": result})
+                            # Zusätzliche Validierung
+                            if any(t["function"]["name"] == tool_name for t in tools):
+                                result = call_mcp_tool(tool_name, args)
+                                tool_steps.append(f"🔧 `{tool_name}`")
+                                messages.append({"role": "tool", "content": result})
+                            else:
+                                print(f"[Ollama] Ignored unknown tool: {tool_name}")
 
                     continue
 
-                # Final Answer
+                # === Final Answer ===
                 final_msg = f"**{model_display}**"
                 if context_line:
                     final_msg += f"\n*{context_line}*"
@@ -317,11 +330,6 @@ def chat_with_agent(message: str, history: list, model_choice: str):
                     {"role": "assistant", "content": final_msg}
                 ]
 
-            return history + [
-                {"role": "user", "content": message},
-                {"role": "assistant", "content": "Max tool turns reached."}
-            ]
-
         except Exception as e:
             return history + [
                 {"role": "user", "content": message},
@@ -333,6 +341,14 @@ def chat_with_agent(message: str, history: list, model_choice: str):
 def get_status():
     tools = get_mcp_tools()
     return f"✅ Connected • {len(tools)} tools" if tools else "❌ MCP Server not reachable"
+
+
+def refresh_all(model_choice_value: str):
+    """Zentrale Refresh-Funktion – aktualisiert Status, Tools und Prompt gleichzeitig."""
+    status = get_status()
+    tools_update = get_tool_names()
+    prompt = get_system_prompt(model_choice_value)
+    return status, tools_update, prompt
 
 
 def get_memories():
@@ -577,6 +593,7 @@ def create_ui():
                 label="Model",
                 scale=1
             )
+            refresh_all_btn = gr.Button("🔄 Refresh All", size="sm", scale=1)
 
         # ========== TWO COLUMN LAYOUT ==========
         with gr.Row(elem_classes=["main-layout"]):
@@ -803,6 +820,13 @@ def create_ui():
         demo.load(get_system_prompt, inputs=[model_choice], outputs=system_prompt_box)
         model_choice.change(get_system_prompt, inputs=[model_choice], outputs=system_prompt_box)
 
+        # ========== ZENTRALE REFRESH FUNKTION ==========
+        refresh_all_btn.click(
+            fn=refresh_all,
+            inputs=[model_choice],
+            outputs=[status_box, tool_dropdown, system_prompt_box]
+        )
+        
     return demo
 
 
