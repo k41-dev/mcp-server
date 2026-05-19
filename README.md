@@ -292,6 +292,22 @@ This release establishes the clean, disciplined foundation after multiple painfu
 
 Everything is now auto-discovered, centrally versioned, and strictly layered under a scalable folder structure.
 
+---
+
+## Recent Improvements (May 2026)
+
+Since the initial v1.0.0 release, the following stability and maintainability improvements have been implemented:
+
+- **Structured Tool Lists** — `list_personas` and `list_skills` now return clean JSON arrays instead of formatted text. The Gradio UI parses this directly (with fallback for compatibility).
+- **Startup Integrity Gate** — Automatic tool integrity check on server startup with clear logging and warnings for missing executors or definitions.
+- **Enhanced Health Endpoint** — `/health` now returns detailed status including active persona, active skill, tool integrity, and executor discovery state.
+- **Improved Logging** — `loader.py` migrated from `print()` to structured `logging` with consistent levels and better debug output.
+- **UI Cleanup** — Tool insertion logic in `gradio_app.py` consolidated and simplified. Category prefixes removed from tool descriptions for cleaner display.
+- **Better Startup Diagnostics** — Clear warnings when required environment variables (e.g. `XAI_API_KEY`, `OLLAMA_URL`) are missing.
+
+These changes significantly improve long-term stability, observability, and developer experience while maintaining full backward compatibility.
+
+
 **MCP Projektleiter** — Principal Engineer & Technical Project Lead  
 *“Langfristige Stabilität > schnelle Hacks.”*
 
