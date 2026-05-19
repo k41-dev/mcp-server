@@ -19,6 +19,7 @@ from backend.tools import (
 from backend.tools.registry import registry as _registry
 from backend.prompt_builder import build_dynamic_system_prompt
 from backend.config import settings
+from backend.dependencies import AgentContextDep, RegistryDep, SettingsDep
 
 
 # ====================== LOGGING ======================
@@ -136,7 +137,13 @@ async def mcp_info():
 
 
 @app.post("/mcp")
-async def mcp_handler(request: Request, authorization: Optional[str] = Header(None)):
+async def mcp_handler(
+    request: Request,
+    authorization: Optional[str] = Header(None),
+    ctx: AgentContextDep = None,
+    reg: RegistryDep = None,
+    cfg: SettingsDep = None,
+):
     if AUTH_ENABLED:
         if not authorization or not authorization.startswith("Bearer "):
             raise HTTPException(401, "Missing or invalid Authorization header")
@@ -192,19 +199,17 @@ async def mcp_handler(request: Request, authorization: Optional[str] = Header(No
                         "description": t.description,
                         "parameters": t.inputSchema
                     },
-                    "category": getattr(t, "category", "core")   # ← NEU
+                    "category": getattr(t, "category", "core")
                 }
-                for t in registry.get_all_definitions()
+                for t in reg.get_all_definitions()
             ]
 
-            # === Zentrale Abfrage über AgentContext ===
+            # === Dependency Injection (jetzt sauber) ===
             try:
-                from backend.tools.context import AgentContext
-                ctx = AgentContext()
-                active_persona = ctx.active_persona
-                active_skill = ctx.active_skill
+                active_persona = ctx.active_persona if ctx else None
+                active_skill = ctx.active_skill if ctx else None
             except Exception as e:
-                logger.error(f"Error getting context via AgentContext: {e}")
+                logger.error(f"Error getting context via dependency: {e}")
                 active_persona = None
                 active_skill = None
 
@@ -307,17 +312,19 @@ async def get_openapi_spec():
 
 
 @app.get("/health")
-async def health_check():
+async def health_check(
+    ctx: AgentContextDep,
+    reg: RegistryDep,
+    cfg: SettingsDep
+):
     """Detailed health endpoint for monitoring and orchestration."""
     try:
         from backend.tools import loader
-        from backend.tools.context import AgentContext
 
-        registered_names = set(t.name for t in registry.get_all_definitions())
+        registered_names = set(t.name for t in reg.get_all_definitions())
         integrity = loader.get_integrity_report(registered_names)
-        
-        # Aktueller Agent-Kontext
-        ctx = AgentContext()
+
+        # Aktueller Agent-Kontext (jetzt über Dependency Injection)
         active_persona = ctx.active_persona.get("name") if ctx.active_persona else None
         active_skill = ctx.active_skill.get("name") if ctx.active_skill else None
 
@@ -334,7 +341,12 @@ async def health_check():
                 "active_skill": active_skill
             },
             "integrity": integrity,
-            "version": "1.0.0"
+            "version": "1.0.0",
+            "config": {
+                "xai_model": cfg.XAI_MODEL,
+                "ollama_model": cfg.OLLAMA_MODEL,
+                "has_xai_key": cfg.has_xai_key
+            }
         }
     except Exception as e:
         return {
