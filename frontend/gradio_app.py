@@ -332,26 +332,7 @@ def clear_chat_history():
     return call_mcp_tool("clear_chat_history", {})
 
 
-def parse_persona_names(text: str) -> list:
-    """Sehr robuste Extraktion von Persona-Namen."""
-    import re
-    names = ["Default"]
-    
-    # Variante 1: - name: oder • name:
-    matches = re.findall(r"[-•]\s*([a-zA-Z0-9_-]+)\s*:", text)
-    
-    # Variante 2: **name** (falls doch mal so kommt)
-    if not matches:
-        matches = re.findall(r"\*\*([a-zA-Z0-9_-]+)\*\*", text)
-    
-    for name in matches:
-        name = name.strip().lower()
-        if name and name not in names:
-            names.append(name)
-    
-    return names
-
-
+# ====================== PERSONA CONTROL ======================
 def get_persona_choices():
     """Returns a clean list of personas for the dropdown.
     Unterstützt jetzt das neue strukturierte JSON-Format von list_personas.
@@ -359,7 +340,6 @@ def get_persona_choices():
     try:
         result = call_mcp_tool("list_personas", {})
         if isinstance(result, str):
-            # 1. Versuch: Neues JSON-Format parsen
             try:
                 data = json.loads(result)
                 if isinstance(data, list):
@@ -370,10 +350,7 @@ def get_persona_choices():
                     ]
                     return [n for n in names if n]
             except Exception:
-                pass  # Fallback auf alten Parser
-
-            # 2. Fallback: Alter Regex-Parser (für Kompatibilität)
-            return parse_persona_names(result)
+                pass
     except Exception as e:
         print(f"[ERROR] get_persona_choices failed: {e}")
     return ["Default"]
@@ -396,22 +373,6 @@ def reset_persona():
 
 
 # ====================== SKILL CONTROL ======================
-def parse_skill_names(text: str) -> list:
-    """Extrahiert Skill-Namen robust aus dem aktuellen list_skills Output."""
-    import re
-    names = ["None"]
-    
-    # Funktioniert sowohl mit "- **name**:" als auch "• **name**:"
-    matches = re.findall(r"[-•]\s*\*\*([a-zA-Z0-9_-]+)\*\*", text)
-    
-    for name in matches:
-        name = name.strip().lower()
-        if name and name not in names:
-            names.append(name)
-    
-    return names
-
-
 def get_skill_choices():
     """Returns a clean list of skills for the dropdown.
     Unterstützt jetzt das neue strukturierte JSON-Format von list_skills.
@@ -419,7 +380,6 @@ def get_skill_choices():
     try:
         result = call_mcp_tool("list_skills", {})
         if isinstance(result, str):
-            # 1. Versuch: Neues JSON-Format parsen
             try:
                 data = json.loads(result)
                 if isinstance(data, list):
@@ -430,10 +390,7 @@ def get_skill_choices():
                     ]
                     return [n for n in names if n]
             except Exception:
-                pass  # Fallback auf alten Parser
-
-            # 2. Fallback: Alter Regex-Parser (für Kompatibilität)
-            return parse_skill_names(result)
+                pass
     except Exception as e:
         print(f"[ERROR] get_skill_choices failed: {e}")
     return ["None"]

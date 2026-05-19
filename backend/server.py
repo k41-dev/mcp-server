@@ -34,7 +34,7 @@ if not os.getenv("OLLAMA_URL") and not os.getenv("OLLAMA_HOST"):
 
 if missing_vars:
     logger.warning(f"⚠️  Missing environment variables: {', '.join(missing_vars)}")
-    
+
 
 # ====================== STARTUP INTEGRITY CHECK ======================
 logger.info("Running startup integrity check...")
@@ -218,18 +218,6 @@ async def mcp_handler(request: Request, authorization: Optional[str] = Header(No
                 logger.error(f"Error building dynamic prompt: {e}")
                 result = {"prompt": "Error building prompt", "version": "error"}
 
-        elif method == "persona/set_active":
-            persona_name = (params or {}).get("persona_name", "")
-            instructions = (params or {}).get("instructions", "")
-            intensity = (params or {}).get("intensity", 7)
-            
-            from backend.tools import set_active_persona
-            set_active_persona(DEFAULT_SESSION_ID, persona_name, instructions, intensity)
-            result = {"status": "ok", "persona": persona_name}
-
-        elif method == "persona/get_active":
-            persona = get_active_persona(DEFAULT_SESSION_ID)
-            result = {"persona": persona}
         else:
             return MCPResponse(id=req_id, error=MCPError(code=-32601, message=f"Method not found: {method}"))
 
