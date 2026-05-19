@@ -537,7 +537,7 @@ def get_active_skill_display():
 
 
 def get_active_context_boxes():
-    """Liefert die aktuell aktiven Persona- und Skill-Namen für die internen Boxen."""
+    """Liefert die aktuell aktiven Persona- und Skill-Namen für die oberen Anzeige-Boxen."""
     try:
         persona_result = call_mcp_tool("get_active_persona", {})
         skill_result = call_mcp_tool("get_active_skill", {})
@@ -751,7 +751,7 @@ def create_ui():
                     with gr.Row():
                         system_prompt_box = gr.Code(
                             language="markdown",
-                            lines=12,
+                            lines=30,
                             interactive=False,
                             label="Current Dynamic System Prompt",
                             show_label=False,
@@ -774,6 +774,21 @@ def create_ui():
                     }
                     </style>
                     """)
+
+                    # === Active Context Summary (immer sichtbar) ===
+                    with gr.Row():
+                        active_persona_display = gr.Textbox(
+                            label="🎭 Active Persona",
+                            value="Default",
+                            interactive=False,
+                            scale=1
+                        )
+                        active_skill_display = gr.Textbox(
+                            label="🛠️ Active Skill",
+                            value="None",
+                            interactive=False,
+                            scale=1
+                        )
 
                     # === Persona Control ===
                     with gr.Accordion("🎭 Persona", open=False, elem_classes=["panel"]):
@@ -808,6 +823,9 @@ def create_ui():
                         ).then(
                             get_status,
                             outputs=[conn_status, prompt_version, active_persona, active_skill]
+                        ).then(
+                            get_active_context_boxes, 
+                            outputs=[active_persona_display, active_skill_display]
                         )
 
                         reset_btn.click(
@@ -820,6 +838,9 @@ def create_ui():
                         ).then(
                             get_status,
                             outputs=[conn_status, prompt_version, active_persona, active_skill]
+                        ).then(
+                            get_active_context_boxes, 
+                            outputs=[active_persona_display, active_skill_display]
                         ).then(
                             lambda: "Default",
                             outputs=persona_dropdown
@@ -862,6 +883,9 @@ def create_ui():
                         ).then(
                             get_status,
                             outputs=[conn_status, prompt_version, active_persona, active_skill]
+                        ).then(
+                            get_active_context_boxes, 
+                            outputs=[active_persona_display, active_skill_display]
                         )
 
                         reset_skill_btn.click(
@@ -874,6 +898,9 @@ def create_ui():
                         ).then(
                             get_status,
                             outputs=[conn_status, prompt_version, active_persona, active_skill]
+                        ).then(
+                            get_active_context_boxes, 
+                            outputs=[active_persona_display, active_skill_display]
                         ).then(
                             lambda: "None",
                             outputs=skill_dropdown
@@ -969,6 +996,7 @@ def create_ui():
         demo.load(load_initial_skills, outputs=skill_dropdown)
         demo.load(get_tool_names, outputs=tool_dropdown)
         demo.load(get_active_context_boxes, outputs=[active_persona_box, active_skill_box])
+        demo.load(get_active_context_boxes, outputs=[active_persona_display, active_skill_display])
         
         model_choice.change(get_system_prompt, inputs=[model_choice], outputs=system_prompt_box)
 
