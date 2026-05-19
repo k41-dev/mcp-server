@@ -25,6 +25,17 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("mcp-log")
 
 
+# ====================== ENVIRONMENT CHECK ======================
+missing_vars = []
+if not os.getenv("XAI_API_KEY"):
+    missing_vars.append("XAI_API_KEY")
+if not os.getenv("OLLAMA_URL") and not os.getenv("OLLAMA_HOST"):
+    missing_vars.append("OLLAMA_URL / OLLAMA_HOST")
+
+if missing_vars:
+    logger.warning(f"⚠️  Missing environment variables: {', '.join(missing_vars)}")
+    
+
 # ====================== STARTUP INTEGRITY CHECK ======================
 logger.info("Running startup integrity check...")
 
@@ -311,9 +322,16 @@ async def health_check():
     """Detailed health endpoint for monitoring and orchestration."""
     try:
         from backend.tools import loader
+        from backend.tools.context import AgentContext
+
         registered_names = set(t.name for t in registry.get_all_definitions())
         integrity = loader.get_integrity_report(registered_names)
         
+        # Aktueller Agent-Kontext
+        ctx = AgentContext()
+        active_persona = ctx.active_persona.get("name") if ctx.active_persona else None
+        active_skill = ctx.active_skill.get("name") if ctx.active_skill else None
+
         return {
             "status": "healthy" if integrity["healthy"] else "degraded",
             "timestamp": __import__("datetime").datetime.utcnow().isoformat() + "Z",
@@ -321,6 +339,10 @@ async def health_check():
                 "registered": integrity["total_registered_tools"],
                 "executors_discovered": integrity["total_discovered_executors"],
                 "healthy": integrity["healthy"]
+            },
+            "context": {
+                "active_persona": active_persona,
+                "active_skill": active_skill
             },
             "integrity": integrity,
             "version": "1.0.0"
