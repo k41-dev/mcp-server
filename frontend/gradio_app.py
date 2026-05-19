@@ -700,7 +700,6 @@ def create_ui():
                 label="Model",
                 scale=1
             )
-            refresh_all_btn = gr.Button("🔄 Refresh All", size="sm", scale=1)
 
         # ========== TWO COLUMN LAYOUT ==========
         with gr.Row(elem_classes=["main-layout"]):
@@ -992,8 +991,29 @@ def create_ui():
             new_history = chat_with_agent(user_message, chat_history, model)
             return new_history, ""
 
-        send_btn.click(respond, [msg, chatbot, model_choice], [chatbot, msg])
-        msg.submit(respond, [msg, chatbot, model_choice], [chatbot, msg])
+        send_btn.click(
+            respond, 
+            [msg, chatbot, model_choice], 
+            [chatbot, msg]
+        ).then(
+            get_status,
+            outputs=[conn_status, prompt_version, active_persona, active_skill]
+        ).then(
+            get_active_context_boxes,
+            outputs=[active_persona_display, active_skill_display]
+        )
+
+        msg.submit(
+            respond, 
+            [msg, chatbot, model_choice], 
+            [chatbot, msg]
+        ).then(
+            get_status,
+            outputs=[conn_status, prompt_version, active_persona, active_skill]
+        ).then(
+            get_active_context_boxes,
+            outputs=[active_persona_display, active_skill_display]
+        )
 
         demo.load(get_status, outputs=[conn_status, prompt_version, active_persona, active_skill])
         demo.load(get_system_prompt, inputs=[model_choice], outputs=system_prompt_box)
@@ -1003,13 +1023,6 @@ def create_ui():
         demo.load(get_active_context_boxes, outputs=[active_persona_display, active_skill_display])
         
         model_choice.change(get_system_prompt, inputs=[model_choice], outputs=system_prompt_box)
-
-        # ========== ZENTRALE REFRESH FUNKTION ==========
-        refresh_all_btn.click(
-            fn=refresh_all,
-            inputs=[model_choice],
-            outputs=[conn_status, prompt_version, active_persona, active_skill]
-        )
 
     return demo
 
