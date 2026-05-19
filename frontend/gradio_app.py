@@ -18,6 +18,7 @@ load_dotenv()
 
 # === Modular UI Components ===
 from components import create_status_bar
+from components.prompt_viewer import create_prompt_viewer, get_system_prompt
 
 
 # ====================== CONFIG ======================
@@ -704,57 +705,11 @@ def create_ui():
             # RIGHT: Menue
             with gr.Column(scale=1, elem_classes=["menue-column"]):
 
-                # === System Prompt Viewer ===
+                # 1. System Prompt Viewer (eigenständig)
                 with gr.Accordion("📜 System Prompt", open=False, elem_classes=["panel"]):
-                    with gr.Row():
-                        system_prompt_box = gr.Code(
-                            language="markdown",
-                            lines=30,
-                            interactive=False,
-                            label="Current Dynamic System Prompt",
-                            show_label=False,
-                            elem_classes=["system-prompt-box"],
-                            elem_id="system_prompt_code",
-                            wrap_lines=False
-                        )
-                    # CSS für feste maximale Höhe + Scrollbar
-                    gr.HTML("""
-                    <style>
-                    .system-prompt-box {
-                        max-height: none !important; 
-                        height: auto !important;
-                        overflow-y: auto !important;
-                        overflow-x: auto !important;
-                        border-radius: 8px;
-                    }
-                    .system-prompt-box pre {
-                        margin: 0 !important;
-                    }
-                    </style>
-                    """)
+                    system_prompt_box = create_prompt_viewer()
 
-                    gr.HTML("""
-                    <style>
-                    .menue-column {
-                        max-height: 90vh;
-                        overflow-y: auto !important;
-                        padding-right: 10px;
-                    }
-
-                    .menue-column::-webkit-scrollbar {
-                        width: 6px;
-                    }
-                    .menue-column::-webkit-scrollbar-thumb {
-                        background-color: #475569;
-                        border-radius: 3px;
-                    }
-                    .menue-column::-webkit-scrollbar-thumb:hover {
-                        background-color: #64748b;
-                    }
-                    </style>
-                    """)
-
-                    # === Active Context Summary (immer sichtbar) ===
+                    # 2. Aktiver Kontext (klein & immer sichtbar)
                     with gr.Row():
                         active_persona_display = gr.Textbox(
                             label="🎭 Active Persona",
@@ -769,110 +724,110 @@ def create_ui():
                             scale=1
                         )
 
-                    # === Persona Control ===
-                    with gr.Accordion("🎭 Persona", open=False, elem_classes=["panel"]):
-                        persona_dropdown = gr.Dropdown(
-                            label="Select Persona",
-                            choices=get_persona_choices(),
-                            interactive=True
-                        )
-                        intensity_slider = gr.Slider(1, 10, value=7, step=1, label="Intensity")
+                        # === Persona Control ===
+                        with gr.Accordion("🎭 Persona", open=False, elem_classes=["panel"]):
+                            persona_dropdown = gr.Dropdown(
+                                label="Select Persona",
+                                choices=get_persona_choices(),
+                                interactive=True
+                            )
+                            intensity_slider = gr.Slider(1, 10, value=7, step=1, label="Intensity")
 
-                        with gr.Row():
-                            apply_btn = gr.Button("Apply Persona", variant="primary", size="sm")
-                            reset_btn = gr.Button("Reset Persona", variant="stop", size="sm")
+                            with gr.Row():
+                                apply_btn = gr.Button("Apply Persona", variant="primary", size="sm")
+                                reset_btn = gr.Button("Reset Persona", variant="stop", size="sm")
 
-                        load_btn = gr.Button("🔄 Load Personas", size="sm")
+                            load_btn = gr.Button("🔄 Load Personas", size="sm")
 
-                        # Wiring
-                        apply_btn.click(
-                            apply_persona,
-                            inputs=[persona_dropdown, intensity_slider]
-                        ).then(
-                            get_system_prompt,
-                            inputs=[model_choice],
-                            outputs=system_prompt_box
-                        ).then(
-                            get_status,
-                            outputs=[conn_status, prompt_version, active_persona, active_skill]
-                        ).then(
-                            get_active_context_boxes, 
-                            outputs=[active_persona_display, active_skill_display]
-                        )
+                            # Wiring
+                            apply_btn.click(
+                                apply_persona,
+                                inputs=[persona_dropdown, intensity_slider]
+                            ).then(
+                                get_system_prompt,
+                                inputs=[model_choice],
+                                outputs=system_prompt_box
+                            ).then(
+                                get_status,
+                                outputs=[conn_status, prompt_version, active_persona, active_skill]
+                            ).then(
+                                get_active_context_boxes, 
+                                outputs=[active_persona_display, active_skill_display]
+                            )
 
-                        reset_btn.click(
-                            reset_persona
-                        ).then(
-                            get_system_prompt,
-                            inputs=[model_choice],
-                            outputs=system_prompt_box
-                        ).then(
-                            get_status,
-                            outputs=[conn_status, prompt_version, active_persona, active_skill]
-                        ).then(
-                            get_active_context_boxes, 
-                            outputs=[active_persona_display, active_skill_display]
-                        ).then(
-                            lambda: "Default",
-                            outputs=persona_dropdown
-                        )
+                            reset_btn.click(
+                                reset_persona
+                            ).then(
+                                get_system_prompt,
+                                inputs=[model_choice],
+                                outputs=system_prompt_box
+                            ).then(
+                                get_status,
+                                outputs=[conn_status, prompt_version, active_persona, active_skill]
+                            ).then(
+                                get_active_context_boxes, 
+                                outputs=[active_persona_display, active_skill_display]
+                            ).then(
+                                lambda: "Default",
+                                outputs=persona_dropdown
+                            )
 
-                        load_btn.click(
-                            load_initial_personas, 
-                            outputs=persona_dropdown
-                        )
+                            load_btn.click(
+                                load_initial_personas, 
+                                outputs=persona_dropdown
+                            )
 
-                    with gr.Accordion("🛠️ Skill", open=False, elem_classes=["panel"]):
-                        skill_dropdown = gr.Dropdown(
-                            label="Select Skill",
-                            choices=get_skill_choices(),
-                            value="None",
-                            interactive=True
-                        )
+                        with gr.Accordion("🛠️ Skill", open=False, elem_classes=["panel"]):
+                            skill_dropdown = gr.Dropdown(
+                                label="Select Skill",
+                                choices=get_skill_choices(),
+                                value="None",
+                                interactive=True
+                            )
 
-                        with gr.Row():
-                            apply_skill_btn = gr.Button("Activate Skill", variant="primary", size="sm")
-                            reset_skill_btn = gr.Button("Reset Skill", variant="stop", size="sm")
+                            with gr.Row():
+                                apply_skill_btn = gr.Button("Activate Skill", variant="primary", size="sm")
+                                reset_skill_btn = gr.Button("Reset Skill", variant="stop", size="sm")
 
-                        load_skills_btn = gr.Button("🔄 Load Skills", size="sm")
+                            load_skills_btn = gr.Button("🔄 Load Skills", size="sm")
 
-                        # Wiring
-                        apply_skill_btn.click(
-                            apply_skill,
-                            inputs=[skill_dropdown]
-                        ).then(
-                            get_system_prompt,
-                            inputs=[model_choice],
-                            outputs=system_prompt_box
-                        ).then(
-                            get_status,
-                            outputs=[conn_status, prompt_version, active_persona, active_skill]
-                        ).then(
-                            get_active_context_boxes, 
-                            outputs=[active_persona_display, active_skill_display]
-                        )
+                            # Wiring
+                            apply_skill_btn.click(
+                                apply_skill,
+                                inputs=[skill_dropdown]
+                            ).then(
+                                get_system_prompt,
+                                inputs=[model_choice],
+                                outputs=system_prompt_box
+                            ).then(
+                                get_status,
+                                outputs=[conn_status, prompt_version, active_persona, active_skill]
+                            ).then(
+                                get_active_context_boxes, 
+                                outputs=[active_persona_display, active_skill_display]
+                            )
 
-                        reset_skill_btn.click(
-                            reset_skill          
-                        ).then(
-                            get_system_prompt,
-                            inputs=[model_choice],
-                            outputs=system_prompt_box
-                        ).then(
-                            get_status,
-                            outputs=[conn_status, prompt_version, active_persona, active_skill]
-                        ).then(
-                            get_active_context_boxes, 
-                            outputs=[active_persona_display, active_skill_display]
-                        ).then(
-                            lambda: "None",
-                            outputs=skill_dropdown
-                        )
+                            reset_skill_btn.click(
+                                reset_skill          
+                            ).then(
+                                get_system_prompt,
+                                inputs=[model_choice],
+                                outputs=system_prompt_box
+                            ).then(
+                                get_status,
+                                outputs=[conn_status, prompt_version, active_persona, active_skill]
+                            ).then(
+                                get_active_context_boxes, 
+                                outputs=[active_persona_display, active_skill_display]
+                            ).then(
+                                lambda: "None",
+                                outputs=skill_dropdown
+                            )
 
-                        load_skills_btn.click(
-                            load_initial_skills, 
-                            outputs=skill_dropdown
-                        )
+                            load_skills_btn.click(
+                                load_initial_skills, 
+                                outputs=skill_dropdown
+                            )
 
                 # ====================== AVAILABLE TOOLS ======================
                 with gr.Accordion("🛠️ Available Tools", open=True, elem_classes=["panel"]) as tools_accordion:

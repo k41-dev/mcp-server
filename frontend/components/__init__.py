@@ -7,5 +7,10 @@ Alle Komponenten sind reine UI-Module und kommunizieren ausschließlich
 """
 
 from .status_bar import create_status_bar
+from .prompt_viewer import create_prompt_viewer, get_system_prompt
 
-__all__ = ["create_status_bar"]
+__all__ = [
+    "create_status_bar",
+    "create_prompt_viewer",
+    "get_system_prompt"
+]
