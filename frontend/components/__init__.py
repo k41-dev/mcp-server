@@ -8,9 +8,11 @@ Alle Komponenten sind reine UI-Module und kommunizieren ausschließlich
 
 from .status_bar import create_status_bar
 from .prompt_viewer import create_prompt_viewer, get_system_prompt
+from .persona_control import create_persona_control
 
 __all__ = [
     "create_status_bar",
     "create_prompt_viewer",
-    "get_system_prompt"
+    "get_system_prompt",
+    "create_persona_control"
 ]
