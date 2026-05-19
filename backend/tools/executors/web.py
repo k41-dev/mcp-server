@@ -7,6 +7,7 @@ import httpx
 from bs4 import BeautifulSoup
 import os
 from typing import Dict, Any
+from backend.config import settings
 
 
 def web_search(args: Dict[str, Any]) -> Dict[str, Any]:
@@ -14,7 +15,7 @@ def web_search(args: Dict[str, Any]) -> Dict[str, Any]:
     if not query:
         return {"content": [{"type": "text", "text": "Error: query cannot be empty"}], "isError": True}
 
-    searxng_url = os.getenv("SEARXNG_URL", "http://searxng:8080")
+    searxng_url = settings.SEARXNG_URL
 
     try:
         with httpx.Client(timeout=20) as client:
@@ -39,8 +40,8 @@ def web_search(args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def browse_page(args: Dict[str, Any]) -> Dict[str, Any]:
-    BROWSERLESS_URL = os.getenv("BROWSERLESS_URL", "http://browserless:3000")
-    BROWSERLESS_TOKEN = os.getenv("BROWSERLESS_TOKEN", "")
+    BROWSERLESS_URL = settings.BROWSERLESS_URL
+    BROWSERLESS_TOKEN = settings.BROWSERLESS_TOKEN
 
     url = args.get("url", "").strip()
     if not url:

@@ -8,6 +8,7 @@ import sqlite3
 import datetime
 import requests
 from pathlib import Path
+from backend.config import settings
 from typing import List, Dict, Any, Optional
 import numpy as np
 
@@ -33,7 +34,7 @@ def _detect_ollama_url() -> str:
     - Inside Docker → host.docker.internal works
     - On host / native Linux → localhost
     """
-    env_url = os.getenv("OLLAMA_URL")
+    env_url = settings.OLLAMA_URL
     if env_url:
         return env_url
 
@@ -48,7 +49,7 @@ def _detect_ollama_url() -> str:
     return "http://localhost:11434"
 
 OLLAMA_URL = _detect_ollama_url()
-OLLAMA_EMBED_MODEL = os.getenv("OLLAMA_EMBED_MODEL", "nomic-embed-text")
+OLLAMA_EMBED_MODEL = settings.OLLAMA_EMBED_MODEL
 
 # 768 dimensions for nomic-embed-text (change if using a different model)
 EMBEDDING_DIM = 768

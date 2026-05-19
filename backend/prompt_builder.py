@@ -7,6 +7,7 @@ import os
 import hashlib
 from pathlib import Path
 from typing import List, Dict, Any, Optional
+from backend.config import settings
 from backend.tools.context import AgentContext
 
 # Resolve prompts directory relative to this file
@@ -15,8 +16,8 @@ from backend.tools.context import AgentContext
 PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
 
 # Dynamic model configuration from environment (matches gradio_app.py + client.py)
-XAI_MODEL = os.getenv("XAI_MODEL", "grok-4.3")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.1:latest")
+XAI_MODEL = settings.XAI_MODEL
+OLLAMA_MODEL = settings.OLLAMA_MODEL
 
 
 def _get_model_family(model_name: str) -> str:

@@ -18,6 +18,7 @@ from backend.tools import (
 )
 from backend.tools.registry import registry as _registry
 from backend.prompt_builder import build_dynamic_system_prompt
+from backend.config import settings
 
 
 # ====================== LOGGING ======================
@@ -27,9 +28,9 @@ logger = logging.getLogger("mcp-log")
 
 # ====================== ENVIRONMENT CHECK ======================
 missing_vars = []
-if not os.getenv("XAI_API_KEY"):
+if not settings.XAI_API_KEY:
     missing_vars.append("XAI_API_KEY")
-if not os.getenv("OLLAMA_URL") and not os.getenv("OLLAMA_HOST"):
+if not settings.OLLAMA_URL and not settings.OLLAMA_HOST:
     missing_vars.append("OLLAMA_URL / OLLAMA_HOST")
 
 if missing_vars:
@@ -57,9 +58,9 @@ except Exception as e:
 
 
 # ====================== CONFIG ======================
-MCP_API_KEY = os.getenv("MCP_API_KEY", "").strip()
+MCP_API_KEY = settings.MCP_API_KEY
 AUTH_ENABLED = bool(MCP_API_KEY and MCP_API_KEY != "your_mcp_authtoken_here")
-MCP_PUBLIC_URL = os.getenv("MCP_PUBLIC_URL")
+MCP_PUBLIC_URL = settings.MCP_PUBLIC_URL
 
 
 # ====================== MODELS ======================
