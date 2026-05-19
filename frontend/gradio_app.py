@@ -353,13 +353,27 @@ def parse_persona_names(text: str) -> list:
 
 
 def get_persona_choices():
-    """Returns a clean list of personas for the dropdown."""
+    """Returns a clean list of personas for the dropdown.
+    Unterstützt jetzt das neue strukturierte JSON-Format von list_personas.
+    """
     try:
         result = call_mcp_tool("list_personas", {})
         if isinstance(result, str):
-            choices = parse_persona_names(result)
-            print(f"[DEBUG] Persona choices: {choices}")   # ← hilft beim Debuggen
-            return choices
+            # 1. Versuch: Neues JSON-Format parsen
+            try:
+                data = json.loads(result)
+                if isinstance(data, list):
+                    names = ["Default"] + [
+                        item.get("name", "").lower() 
+                        for item in data 
+                        if item.get("name")
+                    ]
+                    return [n for n in names if n]
+            except Exception:
+                pass  # Fallback auf alten Parser
+
+            # 2. Fallback: Alter Regex-Parser (für Kompatibilität)
+            return parse_persona_names(result)
     except Exception as e:
         print(f"[ERROR] get_persona_choices failed: {e}")
     return ["Default"]
@@ -399,10 +413,29 @@ def parse_skill_names(text: str) -> list:
 
 
 def get_skill_choices():
-    """Returns a clean list of skills for the dropdown."""
-    result = call_mcp_tool("list_skills", {})
-    if isinstance(result, str):
-        return parse_skill_names(result)
+    """Returns a clean list of skills for the dropdown.
+    Unterstützt jetzt das neue strukturierte JSON-Format von list_skills.
+    """
+    try:
+        result = call_mcp_tool("list_skills", {})
+        if isinstance(result, str):
+            # 1. Versuch: Neues JSON-Format parsen
+            try:
+                data = json.loads(result)
+                if isinstance(data, list):
+                    names = ["None"] + [
+                        item.get("name", "").lower() 
+                        for item in data 
+                        if item.get("name")
+                    ]
+                    return [n for n in names if n]
+            except Exception:
+                pass  # Fallback auf alten Parser
+
+            # 2. Fallback: Alter Regex-Parser (für Kompatibilität)
+            return parse_skill_names(result)
+    except Exception as e:
+        print(f"[ERROR] get_skill_choices failed: {e}")
     return ["None"]
 
 
