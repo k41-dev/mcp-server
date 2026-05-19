@@ -339,7 +339,7 @@ def chat_with_agent(message: str, history: list, model_choice: str):
 
 # ====================== UI ACTIONS ======================
 def get_status():
-    """Erweiterte Status-Anzeige mit Kontext-Informationen."""
+    """Liefert 4 separate Status-Werte für die neuen Boxen."""
     try:
         tools = get_mcp_tools()
         tool_count = len(tools) if tools else 0
@@ -365,27 +365,24 @@ def get_status():
             except:
                 pass
 
-        # Prompt Version holen
         prompt_data = mcp_jsonrpc("prompts/get_dynamic", {"model": "grok"})
         version = prompt_data.get("version", "unknown") if prompt_data else "unknown"
 
-        status = f"✅ Connected • {tool_count} tools"
-        status += f"\n📜 Prompt: {version}"
-        status += f"\n🎭 Persona: {persona_name}"
-        status += f"\n🛠️ Skill: {skill_name}"
+        conn = f"✅ Connected • {tool_count} tools"
+        prompt = f"📜 Prompt: {version}"
+        persona = f"🎭 Persona: {persona_name}"
+        skill = f"🛠️ Skill: {skill_name}"
 
-        return status
+        return conn, prompt, persona, skill
 
     except Exception as e:
-        return f"❌ MCP Server nicht erreichbar\nFehler: {str(e)}"
+        return f"❌ Error: {str(e)}", "📜 Prompt: error", "🎭 Persona: error", "🛠️ Skill: error"
 
 
 def refresh_all(model_choice_value: str):
     """Zentrale Refresh-Funktion – aktualisiert Status, Tools und Prompt gleichzeitig."""
-    status = get_status()
-    tools_update = get_tool_names()
-    prompt = get_system_prompt(model_choice_value)
-    return status, tools_update, prompt
+    conn, prompt, persona, skill = get_status()
+    return conn, prompt, persona, skill
 
 
 def get_memories():
@@ -444,28 +441,54 @@ def reset_persona():
     return "Default"
 
 
+def load_initial_personas():
+    choices = get_persona_choices()
+    
+    normalized = [c.lower() for c in choices]
+    
+    if "default" not in normalized:
+        choices = ["Default"] + choices
+    else:
+        # "Default" an erste Stelle setzen
+        choices = ["Default"] + [c for c in choices if c.lower() != "default"]
+    
+    return gr.update(choices=choices, value="Default")
+
+
 # ====================== SKILL CONTROL ======================
 def get_skill_choices():
-    """Returns a clean list of skills for the dropdown.
-    Unterstützt jetzt das neue strukturierte JSON-Format von list_skills.
-    """
+    """Robuster Parser für list_skills (extrahiert JSON auch bei zusätzlichem Text)."""
     try:
         result = call_mcp_tool("list_skills", {})
-        if isinstance(result, str):
-            try:
-                data = json.loads(result)
-                if isinstance(data, list):
-                    names = ["None"] + [
-                        item.get("name", "").lower() 
-                        for item in data 
-                        if item.get("name")
-                    ]
-                    return [n for n in names if n]
-            except Exception:
-                pass
+        
+        if not isinstance(result, str):
+            return ["None"]
+
+        # JSON-Teil extrahieren (vom ersten [ bis zum letzten ])
+        start = result.find("[")
+        end = result.rfind("]") + 1
+
+        if start == -1 or end == 0:
+            print("[get_skill_choices] Kein JSON-Array gefunden")
+            return ["None"]
+
+        json_part = result[start:end]
+
+        data = json.loads(json_part)
+
+        if isinstance(data, list):
+            names = ["None"] + [
+                item.get("name", "").lower().strip()
+                for item in data
+                if item.get("name")
+            ]
+            return sorted(set(names))
+
+        return ["None"]
+
     except Exception as e:
-        print(f"[ERROR] get_skill_choices failed: {e}")
-    return ["None"]
+        print(f"[get_skill_choices] Fehler: {e}")
+        return ["None"]
 
 
 def apply_skill(skill_name: str):
@@ -487,6 +510,17 @@ def reset_skill():
     """Clear the active skill on the backend."""
     call_mcp_tool("clear_active_skill", {})
     return "None"
+
+
+def load_initial_skills():
+    choices = get_skill_choices()
+    
+    if "None" not in [c.lower() for c in choices]:
+        choices = ["None"] + choices
+    else:
+        choices = ["None"] + [c for c in choices if c.lower() != "none"]
+    
+    return gr.update(choices=choices, value="None")
 
 
 def get_active_skill_display():
@@ -618,12 +652,32 @@ def create_ui():
 
         # ========== TOP STATUS BAR ==========
         with gr.Row(elem_classes=["panel", "status-bar"]):
-            status_box = gr.Textbox(
-                value=get_status(),
-                label="Status",
-                interactive=False,
-                scale=5
-            )
+            with gr.Row(scale=5):
+                conn_status = gr.Textbox(
+                    value="✅ Connected • 32 tools",
+                    label="Connection",
+                    interactive=False,
+                    scale=3
+                )
+                prompt_version = gr.Textbox(
+                    value="📜 Prompt: a2fc2d1d8f",
+                    label="Prompt Version",
+                    interactive=False,
+                    scale=2
+                )
+                active_persona = gr.Textbox(
+                    value="🎭 Persona: None",
+                    label="Persona",
+                    interactive=False,
+                    scale=2
+                )
+                active_skill = gr.Textbox(
+                    value="🛠️ Skill: None",
+                    label="Skill",
+                    interactive=False,
+                    scale=2
+                )
+
             model_choice = gr.Radio(
                 ["Grok", "Ollama"],
                 value="Grok",
@@ -686,7 +740,6 @@ def create_ui():
                         persona_dropdown = gr.Dropdown(
                             label="Select Persona",
                             choices=get_persona_choices(),
-                            value="Default",
                             interactive=True
                         )
                         intensity_slider = gr.Slider(1, 10, value=7, step=1, label="Intensity")
@@ -712,6 +765,9 @@ def create_ui():
                             get_system_prompt,
                             inputs=[model_choice],
                             outputs=system_prompt_box
+                        ).then(
+                            get_status,
+                            outputs=[conn_status, prompt_version, active_persona, active_skill]
                         )
 
                         reset_btn.click(
@@ -722,11 +778,17 @@ def create_ui():
                             inputs=[model_choice],
                             outputs=system_prompt_box
                         ).then(
+                            get_status,
+                            outputs=[conn_status, prompt_version, active_persona, active_skill]
+                        ).then(
                             lambda: "Default",
                             outputs=persona_dropdown
                         )
 
-                        load_btn.click(get_persona_choices, outputs=persona_dropdown)
+                        load_btn.click(
+                            load_initial_personas, 
+                            outputs=persona_dropdown
+                        )
 
                     with gr.Accordion("🛠️ Skill", open=False, elem_classes=["panel"]):
                         skill_dropdown = gr.Dropdown(
@@ -757,6 +819,9 @@ def create_ui():
                             get_system_prompt,
                             inputs=[model_choice],
                             outputs=system_prompt_box
+                        ).then(
+                            get_status,
+                            outputs=[conn_status, prompt_version, active_persona, active_skill]
                         )
 
                         reset_skill_btn.click(
@@ -767,11 +832,17 @@ def create_ui():
                             inputs=[model_choice],
                             outputs=system_prompt_box
                         ).then(
+                            get_status,
+                            outputs=[conn_status, prompt_version, active_persona, active_skill]
+                        ).then(
                             lambda: "None",
                             outputs=skill_dropdown
                         )
 
-                        load_skills_btn.click(get_skill_choices, outputs=skill_dropdown)
+                        load_skills_btn.click(
+                            load_initial_skills, 
+                            outputs=skill_dropdown
+                        )
 
                 # ====================== AVAILABLE TOOLS ======================
                 with gr.Accordion("🛠️ Available Tools", open=True, elem_classes=["panel"]) as tools_accordion:
@@ -852,16 +923,19 @@ def create_ui():
         send_btn.click(respond, [msg, chatbot, model_choice], [chatbot, msg])
         msg.submit(respond, [msg, chatbot, model_choice], [chatbot, msg])
 
-        demo.load(get_status, outputs=status_box)
-        demo.load(get_tool_names, outputs=tool_dropdown)
+        demo.load(get_status, outputs=[conn_status, prompt_version, active_persona, active_skill])
         demo.load(get_system_prompt, inputs=[model_choice], outputs=system_prompt_box)
+        demo.load(load_initial_personas, outputs=persona_dropdown)
+        demo.load(load_initial_skills, outputs=skill_dropdown)
+        demo.load(get_tool_names, outputs=tool_dropdown)
+        
         model_choice.change(get_system_prompt, inputs=[model_choice], outputs=system_prompt_box)
 
         # ========== ZENTRALE REFRESH FUNKTION ==========
         refresh_all_btn.click(
             fn=refresh_all,
             inputs=[model_choice],
-            outputs=[status_box, tool_dropdown, system_prompt_box]
+            outputs=[conn_status, prompt_version, active_persona, active_skill]
         )
 
     return demo
