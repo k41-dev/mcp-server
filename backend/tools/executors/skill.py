@@ -18,17 +18,19 @@ def list_skills(args: Dict[str, Any]) -> Dict[str, Any]:
     if not skills:
         return {"content": [{"type": "text", "text": "No skills found in prompts/skills/"}]}
 
-    lines = ["**Available Skills:**\n"]
-    for skill in skills:
-        name = skill["name"]
-        summary = skill.get("summary", "No description available.")
-        lines.append(f"• **{name}** — {summary}")
-
-    lines.append(
-        "\n**Activation:** Use the tool `execute_skill` with parameter `skill_name` "
-        "to activate a skill."
-    )
-    return {"content": [{"type": "text", "text": "\n".join(lines)}]}
+    structured = [
+        {"name": s["name"], "summary": s.get("summary", "No description available.")} 
+        for s in skills
+    ]
+    
+    note = "\n\n**Hinweis:** Zur Aktivierung `execute_skill` mit Parameter `skill_name` verwenden."
+    
+    return {
+        "content": [{
+            "type": "text", 
+            "text": json.dumps(structured, ensure_ascii=False, indent=2) + note
+        }]
+    }
 
 
 def execute_skill(args: Dict[str, Any]) -> Dict[str, Any]:

@@ -56,10 +56,17 @@ def list_personas(args: Dict[str, Any]) -> Dict[str, Any]:
     if not personas:
         return {"content": [{"type": "text", "text": "No personas found in prompts/personas/"}]}
 
-    lines = ["Available Personas:\n"]
-    for p in personas:
-        lines.append(f"- {p['name']}: {p['summary']}")
-    return {"content": [{"type": "text", "text": "\n".join(lines)}]}
+    structured = [
+        {"name": p["name"], "summary": p["summary"]} 
+        for p in personas
+    ]
+    
+    return {
+        "content": [{
+            "type": "text", 
+            "text": json.dumps(structured, ensure_ascii=False, indent=2)
+        }]
+    }
 
 
 def get_persona(args: Dict[str, Any]) -> Dict[str, Any]:
