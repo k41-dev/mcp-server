@@ -25,6 +25,26 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("mcp-log")
 
 
+# ====================== STARTUP INTEGRITY CHECK ======================
+logger.info("Running startup integrity check...")
+
+try:
+    from backend.tools import loader
+    registered_names = set(t.name for t in registry.get_all_definitions())
+    integrity = loader.get_integrity_report(registered_names)
+    
+    if integrity["healthy"]:
+        logger.info(f"✅ Tool Integrity: healthy ({integrity['total_registered_tools']} tools / {integrity['total_discovered_executors']} executors)")
+    else:
+        logger.warning("⚠️  Tool Integrity issues detected:")
+        if integrity["missing_executors"]:
+            logger.warning(f"   Missing executors for: {integrity['missing_executors']}")
+        if integrity["missing_definitions"]:
+            logger.warning(f"   Executors without definition: {integrity['missing_definitions']}")
+except Exception as e:
+    logger.error(f"Startup integrity check failed: {e}")
+
+
 # ====================== CONFIG ======================
 MCP_API_KEY = os.getenv("MCP_API_KEY", "").strip()
 AUTH_ENABLED = bool(MCP_API_KEY and MCP_API_KEY != "your_mcp_authtoken_here")
@@ -71,11 +91,20 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, 
 
 @app.get("/")
 async def root():
+    try:
+        from backend.tools import loader
+        registered_names = set(t.name for t in registry.get_all_definitions())
+        integrity = loader.get_integrity_report(registered_names)
+        integrity_status = "healthy" if integrity["healthy"] else "issues_found"
+    except Exception:
+        integrity_status = "unknown"
+
     return {
         "status": "running",
         "mcp_endpoint": "/mcp",
         "auth_enabled": AUTH_ENABLED,
-        "tools": len(registry.get_all_definitions())
+        "tools": len(registry.get_all_definitions()),
+        "integrity": integrity_status
     }
 
 
@@ -275,6 +304,33 @@ Use the single POST /mcp endpoint with JSON-RPC 2.0 format.
 @app.get("/mcp/openapi.json", tags=["OpenAPI"])
 async def get_openapi_spec():
     return generate_openapi_spec()
+
+
+@app.get("/health")
+async def health_check():
+    """Detailed health endpoint for monitoring and orchestration."""
+    try:
+        from backend.tools import loader
+        registered_names = set(t.name for t in registry.get_all_definitions())
+        integrity = loader.get_integrity_report(registered_names)
+        
+        return {
+            "status": "healthy" if integrity["healthy"] else "degraded",
+            "timestamp": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+            "tools": {
+                "registered": integrity["total_registered_tools"],
+                "executors_discovered": integrity["total_discovered_executors"],
+                "healthy": integrity["healthy"]
+            },
+            "integrity": integrity,
+            "version": "1.0.0"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": __import__("datetime").datetime.utcnow().isoformat() + "Z"
+        }
 
 
 if __name__ == "__main__":
