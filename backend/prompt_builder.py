@@ -9,13 +9,13 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 from backend.config import settings
 from backend.tools.context import AgentContext
+import logging
 
-# Resolve prompts directory relative to this file
-# In Docker (mcp-server container): /app/prompts/
-# Locally: ../prompts/
+
+logger = logging.getLogger("mcp.prompt")
+
 PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
 
-# Dynamic model configuration from environment (matches gradio_app.py + client.py)
 XAI_MODEL = settings.XAI_MODEL
 OLLAMA_MODEL = settings.OLLAMA_MODEL
 
@@ -145,6 +145,12 @@ def build_dynamic_system_prompt(
         full_prompt += "\n\n" + injection
 
     version = _compute_prompt_version(active_persona, active_skill, len(tools) if tools else 0)
+
+
+    # === Prompt Build Logging ===
+    persona_name = active_persona.get("name") if active_persona else "None"
+    skill_name = active_skill.get("name") if active_skill else "None"
+    logger.info(f"📜 Prompt gebaut | Version: {version} | Persona: {persona_name} | Skill: {skill_name} | Tools: {len(tools) if tools else 0}")
 
     return {
         "prompt": full_prompt,

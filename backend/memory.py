@@ -11,6 +11,10 @@ from pathlib import Path
 from backend.config import settings
 from typing import List, Dict, Any, Optional
 import numpy as np
+import logging
+
+
+logger = logging.getLogger("mcp.memory")
 
 try:
     import sqlite_vec
@@ -234,6 +238,7 @@ def store_long_term_memory(
 
     conn.commit()
     conn.close()
+    logger.info(f"🧠 Memory gespeichert (ID: {memory_id}) | Source: {source}")
     return memory_id
 
 
@@ -297,6 +302,7 @@ def clear_long_term_memory():
     cur.execute("DELETE FROM long_term_memories")
     conn.commit()
     conn.close()
+    logger.warning("🗑️ Long-term Memory wurde geleert!")
     print("🗑️ Long-term memory cleared (facts & preferences wiped).")
 
 
@@ -319,6 +325,7 @@ def clear_chat_history():
     """)
     conn.commit()
     conn.close()
+    logger.warning("🗑️ Chat History wurde geleert!")
     print("🗑️ Chat history cleared (conversation turns wiped).")
 
 

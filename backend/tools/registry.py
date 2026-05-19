@@ -7,6 +7,10 @@ import json
 from pathlib import Path
 from typing import Dict, Any, Callable, Optional, List
 from pydantic import BaseModel
+import logging
+
+
+logger = logging.getLogger("mcp.tools")
 
 
 class ToolDefinition(BaseModel):
@@ -41,15 +45,26 @@ class ToolRegistry:
 
 
     def execute(self, name: str, args: Dict[str, Any]) -> Dict[str, Any]:
-        """Führt ein Tool aus."""
+        """Führt ein Tool aus und loggt den Aufruf."""
+        # === Tool Call Logging ===
+        arg_preview = str(args)[:120] + "..." if len(str(args)) > 120 else str(args)
+        logger.info(f"🔧 Tool aufgerufen: {name} | Args: {arg_preview}")
+
         if name not in self._executors:
+            logger.warning(f"❌ Unbekanntes Tool: {name}")
             return {
                 "content": [{"type": "text", "text": f"Unknown tool: {name}"}],
                 "isError": True
             }
+
         try:
-            return self._executors[name](args)
+            result = self._executors[name](args)
+            is_error = result.get("isError", False)
+            status = "❌ Fehler" if is_error else "✅ Erfolg"
+            logger.info(f"{status} | Tool: {name}")
+            return result
         except Exception as e:
+            logger.error(f"💥 Exception beim Tool '{name}': {str(e)}")
             return {
                 "content": [{"type": "text", "text": f"Tool execution error: {str(e)}"}],
                 "isError": True
@@ -176,15 +191,14 @@ def normalize_tool_name(name: str) -> str:
 def execute_tool(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
     """Führt ein Tool aus (mit Normalisierung + Fallback)."""
     name = normalize_tool_name(name)
+    logger.info(f"🔧 [Fallback] Tool aufgerufen: {name}")
 
     try:
         result = registry.execute(name, args)
-        if not result.get("isError", False):
-            return result
+        return result
     except Exception as e:
-        print(f"[Registry Fallback] {e}")
-
-    return {"content": [{"type": "text", "text": f"Unknown tool: {name}"}], "isError": True}
+        logger.error(f"💥 Fallback-Fehler bei Tool '{name}': {str(e)}")
+        return {"content": [{"type": "text", "text": f"Unknown tool: {name}"}], "isError": True}
 
 
 def refresh_default_session() -> int:
