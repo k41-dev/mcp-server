@@ -6,6 +6,7 @@ state.py - Zentraler, beobachtbarer Manager für transiente Sitzungszustände
 
 from typing import Dict, Any, Optional
 from backend.memory import DEFAULT_SESSION_ID
+from backend.events import publish, EventTypes
 
 # Nur hier darf der State leben
 _active_persona: Dict[int, Dict[str, Any]] = {}
@@ -20,6 +21,12 @@ def set_active_persona(persona_name: str, instructions: str, intensity: int = 7)
         "timestamp": __import__("datetime").datetime.utcnow().isoformat() + "Z"
     }
 
+    # === Event feuern ===
+    publish(EventTypes.PERSONA_ACTIVATED, {
+        "persona_name": persona_name.lower().strip(),
+        "intensity": intensity
+    })
+
 
 def get_active_persona() -> Optional[Dict[str, Any]]:
     return _active_persona.get(DEFAULT_SESSION_ID)
@@ -27,6 +34,9 @@ def get_active_persona() -> Optional[Dict[str, Any]]:
 
 def clear_active_persona() -> None:
     _active_persona.pop(DEFAULT_SESSION_ID, None)
+
+    # === Event feuern ===
+    publish(EventTypes.CONTEXT_CLEARED, {"cleared": "persona"})
 
 
 def set_active_skill(skill_name: str, content: str) -> None:
@@ -36,6 +46,11 @@ def set_active_skill(skill_name: str, content: str) -> None:
         "timestamp": __import__("datetime").datetime.utcnow().isoformat() + "Z"
     }
 
+    # === Event feuern ===
+    publish(EventTypes.SKILL_ACTIVATED, {
+        "skill_name": skill_name.lower().strip()
+    })
+
 
 def get_active_skill() -> Optional[Dict[str, Any]]:
     return _active_skill.get(DEFAULT_SESSION_ID)
@@ -43,3 +58,6 @@ def get_active_skill() -> Optional[Dict[str, Any]]:
 
 def clear_active_skill() -> None:
     _active_skill.pop(DEFAULT_SESSION_ID, None)
+
+    # === Event feuern ===
+    publish(EventTypes.CONTEXT_CLEARED, {"cleared": "skill"})
