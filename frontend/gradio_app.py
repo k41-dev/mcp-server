@@ -523,19 +523,6 @@ def load_initial_skills():
     return gr.update(choices=choices, value="None")
 
 
-def get_active_skill_display():
-    """Get currently active skill name for display."""
-    result = call_mcp_tool("get_active_skill", {})
-    if isinstance(result, str) and "name" in result:
-        try:
-            import json
-            data = json.loads(result)
-            return data.get("name", "None")
-        except:
-            pass
-    return "None"
-
-
 def get_active_context_boxes():
     """Liefert die aktuell aktiven Persona- und Skill-Namen für die oberen Anzeige-Boxen."""
     try:
@@ -949,17 +936,30 @@ def create_ui():
                     memory_box = gr.Textbox(
                         lines=12,
                         interactive=False,
-                        label="Long-term Memory",
+                        label="Memory Output",
                         show_label=False,
                         elem_id="memory_box",
                         elem_classes=["panel"]
                     )
+
+                    # Long-term Memory
+                    gr.Markdown("**Long-term Memory**")
                     with gr.Row():
-                        gr.Button("⚡ Show LT-Memory", size="sm").click(get_memories, outputs=memory_box)
-                        gr.Button("⚡ Clear LT-Memory", size="sm", variant="stop").click(clear_memory, outputs=memory_box)
-                        gr.Button("⚡ Show Chat-Memory", size="sm").click(get_chat_history, outputs=memory_box)
-                        gr.Button("⚡ Clear Chat-Memory", size="sm", variant="stop").click(clear_chat_history, outputs=memory_box)
-                        gr.Button("🗑️ Full Reset",size="lg", variant="stop").click(lambda: call_mcp_tool("full_reset", {}), outputs=memory_box)
+                        gr.Button("Show LT-Memory", size="sm").click(get_memories, outputs=memory_box)
+                        gr.Button("Clear LT-Memory", size="sm", variant="stop").click(clear_memory, outputs=memory_box)
+
+                    # Chat History
+                    gr.Markdown("**Chat History**")
+                    with gr.Row():
+                        gr.Button("Show Chat-Memory", size="sm").click(get_chat_history, outputs=memory_box)
+                        gr.Button("Clear Chat-Memory", size="sm", variant="stop").click(clear_chat_history, outputs=memory_box)
+
+                    # Danger Zone
+                    gr.Markdown("**Danger Zone**")
+                    gr.Button("🗑️ Full Reset (Nuclear)", size="lg", variant="stop").click(
+                        lambda: call_mcp_tool("full_reset", {}), 
+                        outputs=memory_box
+                    )
                    
         # Chat logic
         def respond(user_message, chat_history, model):
