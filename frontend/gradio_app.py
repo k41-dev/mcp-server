@@ -519,7 +519,7 @@ def get_tool_names():
 
 
 def update_tool_info(selected_value):
-    """Zeigt Kategorie + Beschreibung. Funktioniert auch wenn Label statt Name kommt."""
+    """Zeigt die reine Tool-Beschreibung."""
     if not selected_value:
         return ""
 
@@ -532,31 +532,33 @@ def update_tool_info(selected_value):
 
     tools = get_full_tools()
 
-    # Extrahiere echten Namen (funktioniert bei "[core] calculate" oder "calculate")
     import re
     match = re.search(r'\[.*?\]\s*(.+)', selected)
     tool_name = match.group(1).strip() if match else selected
 
     for t in tools:
         if t.get("name") == tool_name or t.get("name") == selected:
-            cat = t.get("category", "core")
-            desc = t.get("description", "No description available.")
-            return f"**Kategorie:** `{cat}`\n\n{desc}"
+            return t.get("description", "No description available.")
 
-    return f"**Kategorie:** `unknown`\n\nKein Tool gefunden für: {selected}"
+    return "Kein Tool gefunden."
 
 
-def insert_selected_tool(selected_value, current_message):
-    """Fügt den echten Tool-Namen ein (ohne Kategorie-Prefix)."""
+def insert_tool(selected_value, current_message):
+    """
+    Fügt den echten Tool-Namen (ohne Kategorie-Prefix) in das Message-Feld ein
+    und setzt das Dropdown zurück, damit dasselbe Tool sofort wieder ausgewählt werden kann.
+    """
     if not selected_value:
-        return current_message or "", ""
+        return current_message or "", "", gr.update(value=None)
 
     if isinstance(selected_value, list):
-        selected = str(selected_value[0]).strip() if selected_value else ""
+        if not selected_value:
+            return current_message or "", "", gr.update(value=None)
+        selected = str(selected_value[0]).strip()
     else:
         selected = str(selected_value).strip()
 
-    # Extrahiere echten Namen
+    # Extrahiere echten Namen (funktioniert bei "[core] calculate" oder "calculate")
     import re
     match = re.search(r'\[.*?\]\s*(.+)', selected)
     tool_name = match.group(1).strip() if match else selected
@@ -566,37 +568,15 @@ def insert_selected_tool(selected_value, current_message):
     else:
         new_message = tool_name
 
-    return new_message
-
-
-def insert_tool_name(selected_value, current_message):
-    """
-    Fügt den Tool-Namen in das Message-Feld ein und setzt das Dropdown zurück,
-    damit dasselbe Tool sofort wieder ausgewählt werden kann.
-    """
-    if isinstance(selected_value, list):
-        if not selected_value:
-            return current_message or "", "", gr.update(value=None)
-        selected_tool = str(selected_value[0]).strip()
-    else:
-        if not selected_value:
-            return current_message or "", "", gr.update(value=None)
-        selected_tool = str(selected_value).strip()
-
-    tools = get_mcp_tools()
+    # Tool-Beschreibung für die Info-Box zurückgeben
+    tools = get_full_tools()
     description = "No description found for this tool."
-
     for t in tools:
-        if t.get("function", {}).get("name") == selected_tool:
-            description = t["function"].get("description", "No description available.")
+        if t.get("name") == tool_name:
+            description = t.get("description", "No description available.")
             break
 
-    if current_message and str(current_message).strip():
-        new_message = f"{str(current_message).strip()} {selected_tool}"
-    else:
-        new_message = selected_tool
-
-    return new_message, description, gr.update(value=None)
+    return new_message, description, gr.update()
 
 
 # ====================== MAIN UI ======================
@@ -807,9 +787,9 @@ def create_ui():
                     )
 
                     insert_tool_btn.click(
-                        fn=insert_selected_tool,
+                        fn=insert_tool,
                         inputs=[tool_dropdown, msg],
-                        outputs=[msg]
+                        outputs=[msg, tool_info, tool_dropdown]
                     )
 
                 # === Memory Viewer ===
