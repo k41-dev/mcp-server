@@ -30,12 +30,28 @@ openai_client = OpenAI(api_key=XAI_API_KEY, base_url="https://api.x.ai/v1") if X
 def mcp_jsonrpc(method: str, params: dict = None):
     url = f"{MCP_URL.rstrip('/')}/mcp"
     payload = {"jsonrpc": "2.0", "id": 1, "method": method, "params": params or {}}
+    
     try:
-        response = requests.post(url, json=payload, timeout=20)
+        response = requests.post(url, json=payload, timeout=15)
         response.raise_for_status()
-        return response.json().get("result")
+        data = response.json()
+
+        if data.get("error"):
+            err = data["error"]
+            if isinstance(err, dict):
+                return {"error": err.get("message", str(err))}
+            return {"error": str(err)}
+
+        return data.get("result")
+
+    except requests.exceptions.ConnectionError:
+        return {"error": "❌ MCP Server nicht erreichbar (Verbindung abgelehnt)"}
+    except requests.exceptions.Timeout:
+        return {"error": "⏱️ MCP Server Timeout (Antwort zu langsam)"}
+    except requests.exceptions.HTTPError as e:
+        return {"error": f"❌ HTTP Fehler {e.response.status_code}"}
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": f"❌ Unerwarteter Fehler: {str(e)}"}
 
 
 def get_mcp_tools():
@@ -65,11 +81,14 @@ def get_full_tools():
 
 def call_mcp_tool(tool_name: str, arguments: dict = None):
     result = mcp_jsonrpc("tools/call", {"name": tool_name, "arguments": arguments or {}})
+    
+    if isinstance(result, dict) and "error" in result:
+        return f"Error: {result['error']}"
+    
     if result and "content" in result:
         texts = [item.get("text", "") for item in result["content"] if item.get("type") == "text"]
         return "\n".join(texts)
-    if result and "error" in result:
-        return f"Error: {result['error']}"
+    
     return "No result returned"
 
 
