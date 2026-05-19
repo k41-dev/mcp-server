@@ -762,6 +762,27 @@ def create_ui():
                     </style>
                     """)
 
+                    gr.HTML("""
+                    <style>
+                    .menue-column {
+                        max-height: 90vh;
+                        overflow-y: auto !important;
+                        padding-right: 10px;
+                    }
+
+                    .menue-column::-webkit-scrollbar {
+                        width: 6px;
+                    }
+                    .menue-column::-webkit-scrollbar-thumb {
+                        background-color: #475569;
+                        border-radius: 3px;
+                    }
+                    .menue-column::-webkit-scrollbar-thumb:hover {
+                        background-color: #64748b;
+                    }
+                    </style>
+                    """)
+
                     # === Active Context Summary (immer sichtbar) ===
                     with gr.Row():
                         active_persona_display = gr.Textbox(
@@ -934,7 +955,7 @@ def create_ui():
                 # === Memory Viewer ===
                 with gr.Accordion("🧠 Memory", open=True, elem_classes=["panel"]):
                     memory_box = gr.Textbox(
-                        lines=12,
+                        lines=8,
                         interactive=False,
                         label="Memory Output",
                         show_label=False,
