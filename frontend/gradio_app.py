@@ -730,6 +730,20 @@ def create_ui():
                             elem_id="system_prompt_code",
                             wrap_lines=False
                         )
+                    # CSS für feste maximale Höhe + Scrollbar
+                    gr.HTML("""
+                    <style>
+                    .system-prompt-box {
+                        max-height: 280px !important;     /* Maximale Höhe */
+                        overflow-y: auto !important;      /* Vertikale Scrollbar */
+                        overflow-x: auto !important;      /* Horizontale Scrollbar falls nötig */
+                        border-radius: 8px;
+                    }
+                    .system-prompt-box pre {
+                        margin: 0 !important;
+                    }
+                    </style>
+                    """)
 
                     # === Persona Control ===
                     with gr.Accordion("🎭 Persona", open=False, elem_classes=["panel"]):
