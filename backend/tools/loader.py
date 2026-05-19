@@ -51,12 +51,9 @@ def discover_executors() -> Dict[str, Callable[[Dict[str, Any]], Dict[str, Any]]
                 if not callable(attr):
                     continue
 
-                # Nur Funktionen behalten, die im aktuellen Modul definiert wurden
-                # (nicht importierte Klassen/Typen wie BeautifulSoup, AgentContext, Dict etc.)
                 if getattr(attr, "__module__", None) != module.__name__:
                     continue
 
-                # Zusätzliche Filter: Nur Funktionen mit genau einem Parameter (args)
                 try:
                     sig = inspect.signature(attr)
                     if len(sig.parameters) != 1:
@@ -107,9 +104,6 @@ def get_integrity_report(registered_tool_names: set[str]) -> dict:
     """
     Vergleicht die automatisch entdeckten Executor-Funktionen mit den
     registrierten Tool-Definitionen aus der Registry.
-    
-    Gibt einen klaren Report zurück, ob alles konsistent ist.
-    Wird von registry.py nach dem Laden aufgerufen.
     """
     discovered = set(_discovered_executors.keys())
     registered = registered_tool_names or set()
@@ -117,6 +111,9 @@ def get_integrity_report(registered_tool_names: set[str]) -> dict:
     missing_executors = sorted(registered - discovered)
     missing_definitions = sorted(discovered - registered)
     healthy = len(missing_executors) == 0 and len(missing_definitions) == 0
+
+    if not healthy:
+        logger.warning(f"Tool Integrity issues: {len(missing_executors)} missing executors, {len(missing_definitions)} missing definitions")
 
     return {
         "status": "healthy" if healthy else "issues_found",
