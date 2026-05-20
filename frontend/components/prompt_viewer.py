@@ -28,7 +28,7 @@ def get_system_prompt(model_choice: str) -> str:
 
 def create_prompt_viewer() -> gr.Code:
     """Erzeugt nur den reinen System Prompt Viewer (Code-Block + zugehöriges CSS)."""
-    with gr.Row():
+    with gr.Accordion("📜 System Prompt", open=False, elem_classes=["panel"]):
         system_prompt_box = gr.Code(
             language="markdown",
             lines=30,

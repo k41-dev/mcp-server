@@ -21,6 +21,7 @@ from components import create_status_bar
 from components.prompt_viewer import create_prompt_viewer, get_system_prompt
 from components.persona_control import create_persona_control
 from components.skill_control import create_skill_control
+from components.tools_panel import create_tools_panel
 
 
 # ====================== CONFIG ======================
@@ -707,9 +708,8 @@ def create_ui():
             # RIGHT: Menue
             with gr.Column(scale=1, elem_classes=["menue-column"]):
 
-                # 1. System Prompt Viewer (eigenständig)
-                with gr.Accordion("📜 System Prompt", open=False, elem_classes=["panel"]):
-                    system_prompt_box = create_prompt_viewer()
+                # === System Prompt Viewer Control ===
+                system_prompt_box = create_prompt_viewer()
 
                 # === Persona Control ===
                 persona_dropdown, intensity_slider, apply_btn, reset_btn, load_btn = create_persona_control()
@@ -781,54 +781,30 @@ def create_ui():
                     outputs=skill_dropdown
                 )
 
-                # ====================== AVAILABLE TOOLS ======================
-                with gr.Accordion("🛠️ Available Tools", open=True, elem_classes=["panel"]) as tools_accordion:
+                # === Tools Panel ===
+                tool_dropdown, tool_info, refresh_btn, insert_tool_btn = create_tools_panel()
 
-                    tool_dropdown = gr.Dropdown(
-                        label="Select Tool",
-                        choices=[],
-                        interactive=True,
-                        allow_custom_value=False,
-                        multiselect=False
-                    )
+                # Dropdown selection → insert + show description
+                tool_dropdown.change(
+                    fn=update_tool_info,
+                    inputs=[tool_dropdown],
+                    outputs=[tool_info]
+                )
 
-                    tool_info = gr.Textbox(
-                        label="Tool Description",
-                        interactive=False,
-                        lines=3
-                    )
+                refresh_btn.click(
+                    fn=get_tool_names,
+                    outputs=[tool_dropdown]
+                ).then(
+                    fn=lambda x: update_tool_info(x) if x else "",
+                    inputs=[tool_dropdown],
+                    outputs=[tool_info]
+                )
 
-                    with gr.Row():
-                        refresh_btn = gr.Button("🔄 Refresh Tools", size="sm")
-                        insert_tool_btn = gr.Button("➕ Insert Tool", variant="secondary", size="sm")
-
-                    # When accordion is expanded → auto-refresh tools (more reliable than only demo.load)
-                    tools_accordion.expand(
-                        fn=get_tool_names,
-                        outputs=tool_dropdown
-                    )
-
-                    # Dropdown selection → insert + show description
-                    tool_dropdown.change(
-                        fn=update_tool_info,
-                        inputs=[tool_dropdown],
-                        outputs=[tool_info]
-                    )
-
-                    refresh_btn.click(
-                        fn=get_tool_names,
-                        outputs=[tool_dropdown]
-                    ).then(
-                        fn=lambda x: update_tool_info(x) if x else "",
-                        inputs=[tool_dropdown],
-                        outputs=[tool_info]
-                    )
-
-                    insert_tool_btn.click(
-                        fn=insert_tool,
-                        inputs=[tool_dropdown, msg],
-                        outputs=[msg, tool_info, tool_dropdown]
-                    )
+                insert_tool_btn.click(
+                    fn=insert_tool,
+                    inputs=[tool_dropdown, msg],
+                    outputs=[msg, tool_info, tool_dropdown]
+                )
 
                 # === Memory Viewer ===
                 with gr.Accordion("🧠 Memory", open=True, elem_classes=["panel"]):
