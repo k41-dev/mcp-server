@@ -321,6 +321,48 @@ Im Rahmen der laufenden Architektur-Härtung wurden folgende zentrale Verbesseru
 
 Diese Maßnahmen verbessern sowohl die **langfristige Wartbarkeit** als auch die **Beobachtbarkeit** des Systems signifikant, ohne die bestehende Architektur zu verletzen.
 
+---
+
+## ✨ Frontend Refactoring
+
+> **Ziel:** Die Frontend-Architektur radikal aufräumen, vereinfachen und langfristig wartbar machen – ohne Kompromisse bei der Architekturtreue.
+
+### Was wurde gemacht?
+
+Nach mehreren schmerzhaften Restrukturierungen war `layout.py` zu einem monolithischen Event-Orchestrator geworden. Ziel des Refactorings war es, die klassische Trennung wiederherzustellen:
+
+- **UI-Komposition** vs. **Event-Verdrahtung**
+
+### Kern-Änderungen
+
+| Bereich                    | Vorher                              | Nachher                                      |
+|---------------------------|-------------------------------------|----------------------------------------------|
+| **Event-Handling**        | Alles direkt in `layout.py`         | Vollständig ausgelagert in `event_wiring.py` |
+| **layout.py**             | ~220 Zeilen, schwer lesbar          | < 100 Zeilen, reine Komposition              |
+| **Temporäre Imports**     | Viele Workarounds                   | Komplett entfernt                            |
+| **Verantwortlichkeiten**  | Vermischt                           | Klar getrennt                                |
+| **Wartbarkeit**           | Mittel                              | Sehr hoch                                    |
+
+### Neue Struktur
+
+- **`event_wiring.py`** — Zentrale Wiring-Schicht  
+  Alle `.click()`, `.then()`, `.submit()` und `.load()` Verbindungen leben jetzt in dedizierten Funktionen (`wire_persona_controls`, `wire_skill_controls`, ...).
+
+- **`layout.py`** — Reine UI-Zusammenstellung  
+  Enthält nur noch die Erstellung und Anordnung der Komponenten. Keine Event-Logik mehr.
+
+- **Komponenten** (`*.py` in `components/`) — Bleiben fokussiert auf ihre jeweilige UI-Logik.
+
+### Ergebnis
+
+- ✅ Deutlich höhere **Lesbarkeit** und **Wartbarkeit**
+- ✅ Keine versteckten Abhängigkeiten oder toten Code
+- ✅ Volle Einhaltung der holy Architecture Rules
+- ✅ Die UI bleibt „dumm“ und kommuniziert ausschließlich über `/mcp`
+- ✅ Einfacher zu erweitern (neue Panels, neue Controls)
+
+**Status:** Abgeschlossen und produktiv. Alle Logs clean, UI startet stabil, sämtliche Interaktionen (Persona, Skill, Tools, Memory) funktionieren einwandfrei.
+
 **MCP Projektleiter** — Principal Engineer & Technical Project Lead  
 *“Langfristige Stabilität > schnelle Hacks.”*
 
