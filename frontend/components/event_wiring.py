@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-#!/usr/bin/env python3
 """
-event_wiring.py - Zentrale Event-Wiring-Schicht für das Frontend
+layout.py - Zentrale UI-Layout-Datei (professionell modularisiert)
 
-Alle .click(), .then(), .submit() und .load() Verbindungen
-sind hier zentralisiert. layout.py bleibt dadurch übersichtlich.
+Enthält nur noch die reine Zusammenstellung der UI.
+Alle Event-Wiring ist ausgelagert in event_wiring.py.
+Kein Backend-Import, keine toten Imports, keine Redundanzen.
 """
 
 import gradio as gr
