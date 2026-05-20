@@ -20,6 +20,7 @@ load_dotenv()
 from components import create_status_bar
 from components.prompt_viewer import create_prompt_viewer, get_system_prompt
 from components.persona_control import create_persona_control
+from components.skill_control import create_skill_control
 
 
 # ====================== CONFIG ======================
@@ -745,51 +746,40 @@ def create_ui():
                     outputs=persona_dropdown
                 )
 
-                with gr.Accordion("🛠️ Skill", open=False, elem_classes=["panel"]):
-                    skill_dropdown = gr.Dropdown(
-                        label="Select Skill",
-                        choices=get_skill_choices(),
-                        value="None",
-                        interactive=True
-                    )
+                # === Skill Control ===
+                skill_dropdown, apply_skill_btn, reset_skill_btn, load_skills_btn = create_skill_control()
 
-                    with gr.Row():
-                        apply_skill_btn = gr.Button("Activate Skill", variant="primary", size="sm")
-                        reset_skill_btn = gr.Button("Reset Skill", variant="stop", size="sm")
+                 # === Skill Event Wiring ===
+                apply_skill_btn.click(
+                    apply_skill,
+                    inputs=[skill_dropdown]
+                ).then(
+                    get_system_prompt,
+                    inputs=[model_choice],
+                    outputs=system_prompt_box
+                ).then(
+                    get_status,
+                    outputs=[conn_status, prompt_version, active_persona, active_skill]
+                )
 
-                    load_skills_btn = gr.Button("🔄 Load Skills", size="sm")
+                reset_skill_btn.click(
+                    reset_skill          
+                ).then(
+                    get_system_prompt,
+                    inputs=[model_choice],
+                    outputs=system_prompt_box
+                ).then(
+                    get_status,
+                    outputs=[conn_status, prompt_version, active_persona, active_skill]
+                ).then(
+                    lambda: "None",
+                    outputs=skill_dropdown
+                )
 
-                    # Wiring
-                    apply_skill_btn.click(
-                        apply_skill,
-                        inputs=[skill_dropdown]
-                    ).then(
-                        get_system_prompt,
-                        inputs=[model_choice],
-                        outputs=system_prompt_box
-                    ).then(
-                        get_status,
-                        outputs=[conn_status, prompt_version, active_persona, active_skill]
-                    )
-
-                    reset_skill_btn.click(
-                        reset_skill          
-                    ).then(
-                        get_system_prompt,
-                        inputs=[model_choice],
-                        outputs=system_prompt_box
-                    ).then(
-                        get_status,
-                        outputs=[conn_status, prompt_version, active_persona, active_skill]
-                    ).then(
-                        lambda: "None",
-                        outputs=skill_dropdown
-                    )
-
-                    load_skills_btn.click(
-                        load_initial_skills, 
-                        outputs=skill_dropdown
-                    )
+                load_skills_btn.click(
+                    load_initial_skills, 
+                    outputs=skill_dropdown
+                )
 
                 # ====================== AVAILABLE TOOLS ======================
                 with gr.Accordion("🛠️ Available Tools", open=True, elem_classes=["panel"]) as tools_accordion:
