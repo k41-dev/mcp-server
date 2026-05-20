@@ -19,9 +19,10 @@ load_dotenv()
 # === Modular UI Components ===
 from components import create_status_bar
 from components.prompt_viewer import create_prompt_viewer, get_system_prompt
-from components.persona_control import create_persona_control
-from components.skill_control import create_skill_control
-from components.tools_panel import create_tools_panel
+from components.persona_control import create_persona_control, apply_persona, reset_persona, load_initial_personas
+from components.skill_control import create_skill_control, apply_skill, reset_skill, load_initial_skills
+from components.tools_panel import create_tools_panel, get_tool_names, update_tool_info, insert_tool
+from components.memory_panel import create_memory_panel, get_memories, clear_memory, get_chat_history, clear_chat_history, full_reset
 
 
 # ====================== CONFIG ======================
@@ -76,14 +77,6 @@ def get_mcp_tools():
             }
             for tool in result["tools"]
         ]
-    return []
-
-
-def get_full_tools():
-    """Returns the complete tool list from MCP including category (UI only)."""
-    result = mcp_jsonrpc("tools/list")
-    if result and "tools" in result:
-        return result["tools"]
     return []
 
 
@@ -393,173 +386,6 @@ def refresh_all(model_choice_value: str):
     return conn, prompt, persona, skill
 
 
-def get_memories():
-    return call_mcp_tool("list_memories", {})
-
-
-def clear_memory():
-    return call_mcp_tool("clear_memory", {})
-
-
-def get_chat_history():
-    return call_mcp_tool("list_chat_history", {"limit": 20})
-
-
-def clear_chat_history():
-    return call_mcp_tool("clear_chat_history", {})
-
-
-# ====================== PERSONA CONTROL ======================
-def get_persona_choices():
-    """Returns a clean list of personas for the dropdown.
-    Unterstützt jetzt das neue strukturierte JSON-Format von list_personas.
-    """
-    try:
-        result = call_mcp_tool("list_personas", {})
-        if isinstance(result, str):
-            try:
-                data = json.loads(result)
-                if isinstance(data, list):
-                    names = ["default"] + [item.get("name", "").lower() for item in data if item.get("name")]
-                    return [n for n in names if n]
-            except Exception:
-                pass
-    except Exception as e:
-        print(f"[ERROR] get_persona_choices failed: {e}")
-    return ["Default"]
-
-
-def apply_persona(persona_name: str, intensity: int):
-    if not persona_name or persona_name.lower() == "default":
-        return "Please select a persona first."
-
-    result = call_mcp_tool("set_active_persona", {
-        "persona_name": persona_name,
-        "intensity": int(intensity)
-    })
-
-    if isinstance(result, str) and ("Error" in result or "error" in result.lower()):
-        return f"❌ Fehler beim Aktivieren von '{persona_name}': {result}"
-
-    return f"✅ {persona_name}"
-
-
-def reset_persona():
-    """Clear the active persona on the backend."""
-    call_mcp_tool("clear_active_persona", {})
-    return "Default"
-
-
-def load_initial_personas():
-    choices = get_persona_choices()
-    
-    normalized = [c.lower() for c in choices]
-    
-    if "default" not in normalized:
-        choices = ["Default"] + choices
-    else:
-        # "Default" an erste Stelle setzen + Duplikate entfernen
-        choices = ["Default"] + [c for c in choices if c.lower() != "default"]
-    
-    return gr.update(choices=choices, value="Default")
-
-
-# ====================== SKILL CONTROL ======================
-def get_skill_choices():
-    """Robuster Parser für list_skills (extrahiert JSON auch bei zusätzlichem Text)."""
-    try:
-        result = call_mcp_tool("list_skills", {})
-        
-        if not isinstance(result, str):
-            return []
-
-        # JSON-Teil extrahieren (vom ersten [ bis zum letzten ])
-        start = result.find("[")
-        end = result.rfind("]") + 1
-
-        if start == -1 or end == 0:
-            print("[get_skill_choices] Kein JSON-Array gefunden")
-            return []
-
-        json_part = result[start:end]
-        data = json.loads(json_part)
-
-        if isinstance(data, list):
-            names = [
-                item.get("name", "").lower().strip()
-                for item in data
-                if item.get("name")
-            ]
-            return sorted(set(names))
-
-        return []
-
-    except Exception as e:
-        print(f"[get_skill_choices] Fehler: {e}")
-        return []
-
-
-def apply_skill(skill_name: str):
-    """Aktiviert einen Skill über das neue execute_skill Tool."""
-    if not skill_name or skill_name == "None":
-        return "Please select a skill first."
-
-    result = call_mcp_tool("execute_skill", {
-        "skill_name": skill_name
-    })
-
-    if isinstance(result, str) and ("Error" in result or "error" in result.lower()):
-        return f"❌ Fehler beim Aktivieren von '{skill_name}': {result}"
-
-    return f"✅ Skill aktiviert: {skill_name}"
-
-
-def reset_skill():
-    """Clear the active skill on the backend."""
-    call_mcp_tool("clear_active_skill", {})
-    return "None"
-
-
-def load_initial_skills():
-    choices = get_skill_choices()
-    
-    if "None" not in [c.lower() for c in choices]:
-        choices = ["None"] + choices
-    else:
-        choices = ["None"] + [c for c in choices if c.lower() != "none"]
-    
-    return gr.update(choices=choices, value="None")
-
-
-def get_active_context_boxes():
-    """Liefert die aktuell aktiven Persona- und Skill-Namen für die oberen Anzeige-Boxen."""
-    try:
-        persona_result = call_mcp_tool("get_active_persona", {})
-        skill_result = call_mcp_tool("get_active_skill", {})
-
-        persona_name = "Default"
-        if isinstance(persona_result, str) and "name" in persona_result:
-            try:
-                p = json.loads(persona_result)
-                if p.get("name"):
-                    persona_name = p["name"].title()
-            except:
-                pass
-
-        skill_name = "None"
-        if isinstance(skill_result, str) and "name" in skill_result:
-            try:
-                s = json.loads(skill_result)
-                if s.get("name"):
-                    skill_name = s["name"].title()
-            except:
-                pass
-
-        return persona_name, skill_name
-    except Exception:
-        return "Default", "None"
-
-
 def get_system_prompt(model_choice: str):
     """Fetch the current dynamic system prompt + version (with debug)."""
     print(f"[DEBUG] get_system_prompt called with model: {model_choice}")
@@ -576,94 +402,6 @@ def get_system_prompt(model_choice: str):
         return header + prompt_text
     
     return f"❌ Could not retrieve system prompt. Response was: {data}"
-
-
-def get_tool_names():
-    """Returns nicely formatted choices with category prefix. Very stable."""
-    try:
-        tools = get_full_tools()
-        
-        if not tools:
-            print("[DEBUG] get_tool_names: No tools received from MCP")
-            return gr.update(choices=[], value=None)
-
-        # Sort by category, then name
-        sorted_tools = sorted(tools, key=lambda t: (t.get("category", "core"), t["name"]))
-
-        choices = []
-        for t in sorted_tools:
-            cat = t.get("category", "core")
-            name = t["name"]
-            label = f"[{cat}] {name}"
-            choices.append(label)
-
-        default_value = choices[0] if choices else None
-        return gr.update(choices=choices, value=default_value)
-
-    except Exception as e:
-        print(f"[ERROR] get_tool_names failed: {e}")
-        return gr.update(choices=[], value=None)
-
-
-def update_tool_info(selected_value):
-    """Zeigt die reine Tool-Beschreibung."""
-    if not selected_value:
-        return ""
-
-    if isinstance(selected_value, list):
-        if not selected_value:
-            return ""
-        selected = str(selected_value[0]).strip()
-    else:
-        selected = str(selected_value).strip()
-
-    tools = get_full_tools()
-
-    import re
-    match = re.search(r'\[.*?\]\s*(.+)', selected)
-    tool_name = match.group(1).strip() if match else selected
-
-    for t in tools:
-        if t.get("name") == tool_name or t.get("name") == selected:
-            return t.get("description", "No description available.")
-
-    return "Kein Tool gefunden."
-
-
-def insert_tool(selected_value, current_message):
-    """
-    Fügt den echten Tool-Namen (ohne Kategorie-Prefix) in das Message-Feld ein
-    und setzt das Dropdown zurück, damit dasselbe Tool sofort wieder ausgewählt werden kann.
-    """
-    if not selected_value:
-        return current_message or "", "", gr.update(value=None)
-
-    if isinstance(selected_value, list):
-        if not selected_value:
-            return current_message or "", "", gr.update(value=None)
-        selected = str(selected_value[0]).strip()
-    else:
-        selected = str(selected_value).strip()
-
-    # Extrahiere echten Namen (funktioniert bei "[core] calculate" oder "calculate")
-    import re
-    match = re.search(r'\[.*?\]\s*(.+)', selected)
-    tool_name = match.group(1).strip() if match else selected
-
-    if current_message and str(current_message).strip():
-        new_message = f"{str(current_message).strip()} {tool_name}"
-    else:
-        new_message = tool_name
-
-    # Tool-Beschreibung für die Info-Box zurückgeben
-    tools = get_full_tools()
-    description = "No description found for this tool."
-    for t in tools:
-        if t.get("name") == tool_name:
-            description = t.get("description", "No description available.")
-            break
-
-    return new_message, description, gr.update()
 
 
 # ====================== MAIN UI ======================
@@ -700,15 +438,12 @@ def create_ui():
                         scale=8,
                         container=False
                     )
-                    send_btn = gr.Button(
-                    "Send",
-                        variant="primary",                        scale=1
-                    )  
+                    send_btn = gr.Button("Send", variant="primary", scale=1)
 
             # RIGHT: Menue
             with gr.Column(scale=1, elem_classes=["menue-column"]):
 
-                # === System Prompt Viewer Control ===
+                # === System Prompt Viewer ===
                 system_prompt_box = create_prompt_viewer()
 
                 # === Persona Control ===
@@ -738,53 +473,52 @@ def create_ui():
                     outputs=[conn_status, prompt_version, active_persona, active_skill]
                 ).then(
                     lambda: "Default",
-                    outputs=persona_dropdown
+                    outputs=[persona_dropdown]
                 )
 
                 load_btn.click(
                     load_initial_personas,
-                    outputs=persona_dropdown
+                    outputs=[persona_dropdown]
                 )
 
                 # === Skill Control ===
                 skill_dropdown, apply_skill_btn, reset_skill_btn, load_skills_btn = create_skill_control()
 
-                 # === Skill Event Wiring ===
+                # === Skill Event Wiring ===
                 apply_skill_btn.click(
                     apply_skill,
                     inputs=[skill_dropdown]
                 ).then(
                     get_system_prompt,
                     inputs=[model_choice],
-                    outputs=system_prompt_box
+                    outputs=[system_prompt_box]
                 ).then(
                     get_status,
                     outputs=[conn_status, prompt_version, active_persona, active_skill]
                 )
 
                 reset_skill_btn.click(
-                    reset_skill          
+                    reset_skill
                 ).then(
                     get_system_prompt,
                     inputs=[model_choice],
-                    outputs=system_prompt_box
+                    outputs=[system_prompt_box]
                 ).then(
                     get_status,
                     outputs=[conn_status, prompt_version, active_persona, active_skill]
                 ).then(
                     lambda: "None",
-                    outputs=skill_dropdown
+                    outputs=[skill_dropdown]
                 )
 
                 load_skills_btn.click(
-                    load_initial_skills, 
-                    outputs=skill_dropdown
+                    load_initial_skills,
+                    outputs=[skill_dropdown]
                 )
 
                 # === Tools Panel ===
                 tool_dropdown, tool_info, refresh_btn, insert_tool_btn = create_tools_panel()
 
-                # Dropdown selection → insert + show description
                 tool_dropdown.change(
                     fn=update_tool_info,
                     inputs=[tool_dropdown],
@@ -806,43 +540,23 @@ def create_ui():
                     outputs=[msg, tool_info, tool_dropdown]
                 )
 
-                # === Memory Viewer ===
-                with gr.Accordion("🧠 Memory", open=True, elem_classes=["panel"]):
-                    memory_box = gr.Textbox(
-                        lines=8,
-                        interactive=False,
-                        label="Memory Output",
-                        show_label=False,
-                        elem_id="memory_box",
-                        elem_classes=["panel"]
-                    )
+                # === Memory Panel ===
+                memory_box, show_lt_btn, clear_lt_btn, show_chat_btn, clear_chat_btn, full_reset_btn = create_memory_panel()
 
-                    # Long-term Memory
-                    gr.Markdown("**Long-term Memory**")
-                    with gr.Row():
-                        gr.Button("Show LT-Memory", size="sm").click(get_memories, outputs=memory_box)
-                        gr.Button("Clear LT-Memory", size="sm", variant="stop").click(clear_memory, outputs=memory_box)
+                show_lt_btn.click(get_memories, outputs=[memory_box])
+                clear_lt_btn.click(clear_memory, outputs=[memory_box])
 
-                    # Chat History
-                    gr.Markdown("**Chat History**")
-                    with gr.Row():
-                        gr.Button("Show Chat-Memory", size="sm").click(get_chat_history, outputs=memory_box)
-                        gr.Button("Clear Chat-Memory", size="sm", variant="stop").click(clear_chat_history, outputs=memory_box)
+                show_chat_btn.click(get_chat_history, outputs=[memory_box])
+                clear_chat_btn.click(clear_chat_history, outputs=[memory_box])
 
-                    # Danger Zone
-                    gr.Markdown("**Danger Zone**")
-                    gr.Button("🗑️ Full Reset (Nuclear)", size="lg", variant="stop").click(
-                        lambda: call_mcp_tool("full_reset", {}), 
-                        outputs=memory_box
-                    )
-                   
-        # Chat logic
+                full_reset_btn.click(full_reset, outputs=[memory_box])
+
+        # ====================== CHAT LOGIC ======================
         def respond(user_message, chat_history, model):
             if not user_message.strip():
                 return chat_history, ""
 
             call_mcp_tool("add_chat_turn", {"role": "user", "content": user_message})
-
             new_history = chat_with_agent(user_message, chat_history, model)
             return new_history, ""
 
@@ -864,13 +578,14 @@ def create_ui():
             outputs=[conn_status, prompt_version, active_persona, active_skill]
         )
 
+        # ====================== DEMO LOAD ======================
         demo.load(get_status, outputs=[conn_status, prompt_version, active_persona, active_skill])
-        demo.load(get_system_prompt, inputs=[model_choice], outputs=system_prompt_box)
-        demo.load(load_initial_personas, outputs=persona_dropdown)
-        demo.load(load_initial_skills, outputs=skill_dropdown)
-        demo.load(get_tool_names, outputs=tool_dropdown)
+        demo.load(get_system_prompt, inputs=[model_choice], outputs=[system_prompt_box])
+        demo.load(load_initial_personas, outputs=[persona_dropdown])
+        demo.load(load_initial_skills, outputs=[skill_dropdown])
+        demo.load(get_tool_names, outputs=[tool_dropdown])
         
-        model_choice.change(get_system_prompt, inputs=[model_choice], outputs=system_prompt_box)
+        model_choice.change(get_system_prompt, inputs=[model_choice], outputs=[system_prompt_box])
 
     return demo
 
