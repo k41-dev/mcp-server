@@ -149,7 +149,13 @@ def create_ui():
                 )
 
                 # === Tools Panel ===
-                tool_dropdown, tool_info, refresh_btn, insert_tool_btn, refresh_tools = create_tools_panel()
+                initial_tool_choices = get_tool_names()
+                initial_tool_value = initial_tool_choices[0] if initial_tool_choices else None
+
+                tool_dropdown, tool_info, refresh_btn, insert_tool_btn = create_tools_panel(
+                    initial_choices=initial_tool_choices,
+                    initial_value=initial_tool_value
+                )
 
                 tool_dropdown.change(
                     fn=update_tool_info,
@@ -157,18 +163,18 @@ def create_ui():
                     outputs=[tool_info]
                 )
 
+                def refresh_tool_list():
+                    new_choices = get_tool_names()
+                    new_value = new_choices[0] if new_choices else None
+                    return gr.update(choices=new_choices, value=new_value)
+
                 refresh_btn.click(
-                    fn=get_tool_names,
+                    fn=refresh_tool_list,
                     outputs=[tool_dropdown]
                 ).then(
                     fn=lambda x: update_tool_info(x) if x else "",
                     inputs=[tool_dropdown],
                     outputs=[tool_info]
-                )
-
-                demo.load(
-                    fn=refresh_tools,
-                    outputs=[tool_dropdown]
                 )
 
                 insert_tool_btn.click(

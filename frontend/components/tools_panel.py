@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
-tools_panel.py - Tools Panel Komponente (clean)
-Fokus: Dropdown zeigt den ausgewählten Tool-Namen korrekt an.
+tools_panel.py - Tools Panel Komponente (stabile Version - Option 1)
 """
 
 import gradio as gr
@@ -9,14 +8,10 @@ from .mcp_client import get_mcp_tools
 
 
 def get_tool_names():
-    """Returns clean list of tool names. Logs if empty."""
     try:
         tools = get_mcp_tools()
-        if isinstance(tools, list) and len(tools) > 0:
-            names = [t["function"]["name"] for t in tools if isinstance(t, dict) and "function" in t and "name" in t["function"]]
-            print(f"[get_tool_names] {len(names)} Tools geladen")
-            return names
-        print("[get_tool_names] WARNUNG: Keine Tools vom MCP Server erhalten!")
+        if isinstance(tools, list):
+            return [t["function"]["name"] for t in tools if isinstance(t, dict) and "function" in t and "name" in t["function"]]
         return []
     except Exception as e:
         print(f"[get_tool_names] Fehler: {e}")
@@ -24,7 +19,6 @@ def get_tool_names():
 
 
 def update_tool_info(tool_name):
-    """Returns only the plain description (no extra text)."""
     if isinstance(tool_name, list):
         tool_name = tool_name[0] if tool_name else ""
     
@@ -53,15 +47,15 @@ def insert_tool(tool_name, current_msg: str):
     return new_msg, "", tool_name
 
 
-def create_tools_panel():
-    choices = get_tool_names()
-    default_value = choices[0] if choices else None
+def create_tools_panel(initial_choices=None, initial_value=None):
+    choices = initial_choices or get_tool_names()
+    value = initial_value or (choices[0] if choices else None)
 
     with gr.Accordion("🛠️ Available Tools", open=False, elem_classes=["panel"]):
         tool_dropdown = gr.Dropdown(
             label="Select Tool",
             choices=choices,
-            value=default_value,
+            value=value,
             interactive=True,
             elem_classes=["tool-dropdown"]
         )
@@ -77,7 +71,6 @@ def create_tools_panel():
             refresh_btn = gr.Button("🔄 Refresh Tools", size="sm")
             insert_tool_btn = gr.Button("➕ Insert Tool", size="sm", variant="secondary")
 
-    # Auto-Refresh Funktion (wird beim Seitenladen aufgerufen)
     def refresh_tools():
         new_choices = get_tool_names()
         new_value = new_choices[0] if new_choices else None
@@ -88,4 +81,4 @@ def create_tools_panel():
         outputs=[tool_dropdown]
     )
 
-    return tool_dropdown, tool_info, refresh_btn, insert_tool_btn, refresh_tools
+    return tool_dropdown, tool_info, refresh_btn, insert_tool_btn
