@@ -149,7 +149,7 @@ def create_ui():
                 )
 
                 # === Tools Panel ===
-                tool_dropdown, tool_info, refresh_btn, insert_tool_btn = create_tools_panel()
+                tool_dropdown, tool_info, refresh_btn, insert_tool_btn, refresh_tools = create_tools_panel()
 
                 tool_dropdown.change(
                     fn=update_tool_info,
@@ -164,6 +164,11 @@ def create_ui():
                     fn=lambda x: update_tool_info(x) if x else "",
                     inputs=[tool_dropdown],
                     outputs=[tool_info]
+                )
+
+                demo.load(
+                    fn=refresh_tools,
+                    outputs=[tool_dropdown]
                 )
 
                 insert_tool_btn.click(
