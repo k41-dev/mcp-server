@@ -5,12 +5,12 @@ skill_control.py - Skill Control Komponente
 
 import gradio as gr
 import json
+from .mcp_client import call_mcp_tool
 
 
 def get_skill_choices():
     """Returns a clean list of skills for the dropdown."""
     try:
-        from gradio_app import call_mcp_tool
         result = call_mcp_tool("list_skills", {})
         
         if not isinstance(result, str):
@@ -44,7 +44,6 @@ def apply_skill(skill_name: str):
     if not skill_name or skill_name == "None":
         return "Please select a skill first."
 
-    from gradio_app import call_mcp_tool
     result = call_mcp_tool("execute_skill", {
         "skill_name": skill_name
     })
@@ -56,7 +55,6 @@ def apply_skill(skill_name: str):
 
 
 def reset_skill():
-    from gradio_app import call_mcp_tool
     call_mcp_tool("clear_active_skill", {})
     return "None"
 

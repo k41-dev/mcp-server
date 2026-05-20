@@ -1,112 +1,79 @@
 #!/usr/bin/env python3
 """
-tools_panel.py - Available Tools Panel Komponente
+tools_panel.py - Tools Panel Komponente (verbessert)
 """
 
 import gradio as gr
-import re
-
-
-def get_full_tools():
-    from gradio_app import mcp_jsonrpc
-    result = mcp_jsonrpc("tools/list")
-    if result and "tools" in result:
-        return result["tools"]
-    return []
+from .mcp_client import call_mcp_tool, get_mcp_tools
 
 
 def get_tool_names():
+    """Returns a list of available tool names for the dropdown."""
     try:
-        tools = get_full_tools()
-        if not tools:
-            return gr.update(choices=[], value=None)
-
-        sorted_tools = sorted(tools, key=lambda t: (t.get("category", "core"), t["name"]))
-
-        choices = []
-        for t in sorted_tools:
-            cat = t.get("category", "core")
-            name = t["name"]
-            label = f"[{cat}] {name}"
-            choices.append(label)
-
-        default_value = choices[0] if choices else None
-        return gr.update(choices=choices, value=default_value)
-
+        tools = get_mcp_tools()
+        if tools:
+            return [t["function"]["name"] for t in tools]
+        return []
     except Exception as e:
-        print(f"[ERROR] get_tool_names failed: {e}")
-        return gr.update(choices=[], value=None)
+        print(f"[get_tool_names] Fehler: {e}")
+        return []
 
 
-def update_tool_info(selected_value):
-    if not selected_value:
+def update_tool_info(tool_name):
+    """Returns description + tool name for the selected tool."""
+    if isinstance(tool_name, list):
+        tool_name = tool_name[0] if tool_name else ""
+    
+    if not tool_name or not isinstance(tool_name, str) or tool_name.strip() == "":
         return ""
-
-    if isinstance(selected_value, list):
-        if not selected_value:
-            return ""
-        selected = str(selected_value[0]).strip()
-    else:
-        selected = str(selected_value).strip()
-
-    tools = get_full_tools()
-    match = re.search(r'\[.*?\]\s*(.+)', selected)
-    tool_name = match.group(1).strip() if match else selected
-
-    for t in tools:
-        if t.get("name") == tool_name or t.get("name") == selected:
-            return t.get("description", "No description available.")
-
-    return "Kein Tool gefunden."
+    
+    try:
+        tools = get_mcp_tools()
+        for t in tools:
+            if t.get("function", {}).get("name") == tool_name:
+                desc = t.get("function", {}).get("description", "No description available.")
+                # Schönes Format mit Tool-Name
+                return f"**{tool_name}**\n\n{desc}"
+        
+        return f"**{tool_name}**\n\nTool nicht gefunden."
+        
+    except Exception as e:
+        print(f"[update_tool_info] Fehler: {e}")
+        return f"Error: {str(e)}"
 
 
-def insert_tool(selected_value, current_message):
-    if not selected_value:
-        return current_message or "", "", gr.update(value=None)
-
-    if isinstance(selected_value, list):
-        if not selected_value:
-            return current_message or "", "", gr.update(value=None)
-        selected = str(selected_value[0]).strip()
-    else:
-        selected = str(selected_value).strip()
-
-    match = re.search(r'\[.*?\]\s*(.+)', selected)
-    tool_name = match.group(1).strip() if match else selected
-
-    if current_message and str(current_message).strip():
-        new_message = f"{str(current_message).strip()} {tool_name}"
-    else:
-        new_message = tool_name
-
-    tools = get_full_tools()
-    description = "No description found for this tool."
-    for t in tools:
-        if t.get("name") == tool_name:
-            description = t.get("description", "No description available.")
-            break
-
-    return new_message, description, gr.update()
+def insert_tool(tool_name, current_msg: str):
+    """Inserts the selected tool into the message input field (handles list)."""
+    if isinstance(tool_name, list):
+        tool_name = tool_name[0] if tool_name else ""
+    
+    if not tool_name:
+        return current_msg or "", "", tool_name
+    
+    tool_call = f"Use the tool `{tool_name}`"
+    new_msg = (current_msg + " " + tool_call).strip() if current_msg else tool_call
+    return new_msg, "", tool_name
 
 
 def create_tools_panel():
-    with gr.Accordion("🛠️ Available Tools", open=True, elem_classes=["panel"]):
+    """Erzeugt die komplette Tools Panel Accordion."""
+    with gr.Accordion("🛠️ Available Tools", open=False, elem_classes=["panel"]):
         tool_dropdown = gr.Dropdown(
             label="Select Tool",
-            choices=[],
+            choices=get_tool_names(),
             interactive=True,
-            allow_custom_value=False,
-            multiselect=False
+            elem_classes=["tool-dropdown"]
         )
 
         tool_info = gr.Textbox(
             label="Tool Description",
             interactive=False,
-            lines=3
+            lines=3,
+            elem_classes=["tool-info"]
         )
 
         with gr.Row():
             refresh_btn = gr.Button("🔄 Refresh Tools", size="sm")
-            insert_tool_btn = gr.Button("➕ Insert Tool", variant="secondary", size="sm")
+            insert_tool_btn = gr.Button("➕ Insert Tool", size="sm", variant="secondary")
 
     return tool_dropdown, tool_info, refresh_btn, insert_tool_btn

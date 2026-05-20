@@ -13,6 +13,7 @@ from .persona_control import create_persona_control
 from .skill_control import create_skill_control
 from .tools_panel import create_tools_panel
 from .memory_panel import create_memory_panel
+from .chat_handler import respond, get_status, refresh_all
 
 
 __all__ = [
@@ -23,5 +24,8 @@ __all__ = [
     "create_persona_control",
     "create_skill_control",
     "create_tools_panel",
-    "create_memory_panel"
+    "create_memory_panel",
+    "respond",
+    "get_status",
+    "refresh_all"
 ]

@@ -4,30 +4,26 @@ memory_panel.py - Memory Panel Komponente
 """
 
 import gradio as gr
+from .mcp_client import call_mcp_tool
 
 
 def get_memories():
-    from gradio_app import call_mcp_tool
     return call_mcp_tool("list_memories", {})
 
 
 def clear_memory():
-    from gradio_app import call_mcp_tool
     return call_mcp_tool("clear_memory", {})
 
 
 def get_chat_history():
-    from gradio_app import call_mcp_tool
     return call_mcp_tool("list_chat_history", {"limit": 20})
 
 
 def clear_chat_history():
-    from gradio_app import call_mcp_tool
     return call_mcp_tool("clear_chat_history", {})
 
 
 def full_reset():
-    from gradio_app import call_mcp_tool
     return call_mcp_tool("full_reset", {})
 
 

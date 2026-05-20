@@ -1,28 +1,16 @@
 #!/usr/bin/env python3
 """
 status_bar.py - Interaktive Status-Bar / Navbar Komponente
-
-Enthält:
-- Connection Status
-- Prompt Version (mit Rebuild-Button)
-- Active Persona
-- Active Skill
-- Model Selector (Grok / Ollama)
-
-Diese Komponente wird später zur vollwertigen Navbar ausgebaut.
-Alle Aktionen laufen über MCP JSON-RPC.
 """
 
 import gradio as gr
 from typing import Tuple
+from .mcp_client import call_mcp_tool, mcp_jsonrpc
 
 
 def create_status_bar() -> Tuple[gr.Textbox, gr.Textbox, gr.Textbox, gr.Textbox, gr.Radio]:
     """
     Erzeugt die obere Status-Bar (zukünftige Navbar).
-
-    Returns:
-        (conn_status, prompt_version, active_persona, active_skill, model_choice)
     """
     with gr.Row(
         elem_classes=["panel", "status-bar"],

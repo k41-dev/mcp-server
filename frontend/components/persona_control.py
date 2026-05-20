@@ -5,12 +5,12 @@ persona_control.py - Persona Control Komponente
 
 import gradio as gr
 import json
+from .mcp_client import call_mcp_tool
 
 
 def get_persona_choices():
     """Returns a clean list of personas for the dropdown."""
     try:
-        from gradio_app import call_mcp_tool
         result = call_mcp_tool("list_personas", {})
         if isinstance(result, str):
             try:
@@ -29,7 +29,6 @@ def apply_persona(persona_name: str, intensity: int):
     if not persona_name or persona_name.lower() == "default":
         return "Please select a persona first."
 
-    from gradio_app import call_mcp_tool
     result = call_mcp_tool("set_active_persona", {
         "persona_name": persona_name,
         "intensity": int(intensity)
@@ -42,7 +41,6 @@ def apply_persona(persona_name: str, intensity: int):
 
 
 def reset_persona():
-    from gradio_app import call_mcp_tool
     call_mcp_tool("clear_active_persona", {})
     return "Default"
 
