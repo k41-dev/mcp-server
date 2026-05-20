@@ -17,11 +17,11 @@ from components import (
     create_skill_control,
     create_tools_panel,
     create_memory_panel,
-    create_chat_panel,
+    create_chat_panel
 )
-from components.prompt_viewer import get_system_prompt
 
-# Chat Handler
+from components.prompt_viewer import get_system_prompt
+from components.mcp_client import get_mcp_tools
 from components.chat_handler import respond, get_status
 
 # Persona Control Funktionen
@@ -212,6 +212,7 @@ def create_ui():
             get_status,
             outputs=[conn_status, prompt_version, active_persona, active_skill]
         )
+
 
         # ====================== DEMO LOAD ======================
         demo.load(get_status, outputs=[conn_status, prompt_version, active_persona, active_skill])
