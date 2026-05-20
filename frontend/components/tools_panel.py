@@ -40,11 +40,11 @@ def insert_tool(tool_name, current_msg: str):
         tool_name = tool_name[0] if tool_name else ""
     
     if not tool_name:
-        return current_msg or "", "", tool_name
+        return current_msg or "", tool_name
     
     tool_call = f"Use the tool `{tool_name}`"
     new_msg = (current_msg + " " + tool_call).strip() if current_msg else tool_call
-    return new_msg, "", tool_name
+    return new_msg, tool_name
 
 
 def create_tools_panel(initial_choices=None, initial_value=None):

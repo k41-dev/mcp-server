@@ -180,7 +180,7 @@ def create_ui():
                 insert_tool_btn.click(
                     fn=insert_tool,
                     inputs=[tool_dropdown, msg],
-                    outputs=[msg, tool_info, tool_dropdown]
+                    outputs=[msg, tool_dropdown]
                 )
 
                 # === Memory Panel ===
