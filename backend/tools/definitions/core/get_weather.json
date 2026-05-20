@@ -1,0 +1,15 @@
+{
+  "name": "get_weather",
+  "description": "Returns current weather for a city (via wttr.in). Very reliable and no API key required. Default city is Zurich.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "city": {
+        "type": "string",
+        "description": "City name (e.g. 'Zurich', 'Berlin', 'Hamburg', 'New York'). Optional – defaults to Zurich."
+      }
+    },
+    "required": []
+  },
+  "category": "core"
+}
