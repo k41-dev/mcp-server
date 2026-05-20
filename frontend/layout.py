@@ -34,11 +34,6 @@ from components.event_wiring import (
     wire_initial_demo_loads,
 )
 
-# === Temporäre Imports für demo.load() ===
-from components.persona_control import load_initial_personas
-from components.skill_control import load_initial_skills
-from components.tools_panel import get_tool_names
-
 # Skill Control Funktionen
 from components.skill_control import (
     apply_skill,
