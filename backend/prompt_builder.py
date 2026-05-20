@@ -32,17 +32,13 @@ def _get_model_family(model_name: str) -> str:
 def _compute_prompt_version(
     active_persona: Optional[Dict[str, Any]] = None, 
     active_skill: Optional[Dict[str, Any]] = None,
-    tools_count: int = 0
+    tools_count: int = 0,
+    model: str = None                     # NEU
 ) -> str:
-    # Falls keine Werte übergeben wurden → über AgentContext holen
-    if active_persona is None or active_skill is None:
-        ctx = AgentContext()
-        active_persona = ctx.active_persona
-        active_skill = ctx.active_skill
-
+    model_family = _get_model_family(model) if model else "grok"
     persona_part = active_persona.get("name", "none") if active_persona else "none"
     skill_part = active_skill.get("name", "none") if active_skill else "none"
-    key = f"{persona_part}|{skill_part}|{tools_count}"
+    key = f"{model_family}|{persona_part}|{skill_part}|{tools_count}"
     return hashlib.md5(key.encode()).hexdigest()[:10]
 
 
@@ -145,7 +141,9 @@ def build_dynamic_system_prompt(
     if injection:
         full_prompt += "\n\n" + injection
 
-    version = _compute_prompt_version(active_persona, active_skill, len(tools) if tools else 0)
+    version = _compute_prompt_version(
+        active_persona, active_skill, len(tools) if tools else 0, model
+    )
 
     # === Prompt-Cache Check ===
     cached = get_cached_prompt(version)
@@ -195,9 +193,13 @@ def get_prompt_for_model(
 def get_prompt_version_only(
     active_persona: Optional[Dict[str, Any]] = None,
     active_skill: Optional[Dict[str, Any]] = None,
-    tools_count: int = 0
+    tools_count: int = 0,
+    model: Optional[str] = None          # ← neu: Optional + Default
 ) -> str:
+    """Returns version string. Special case for initial load."""
     if active_persona is None and active_skill is None and tools_count == 0:
         return "initial"
 
-    return _compute_prompt_version(active_persona, active_skill, tools_count)
+    return _compute_prompt_version(
+        active_persona, active_skill, tools_count, model
+    )

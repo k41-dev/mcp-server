@@ -74,7 +74,8 @@ def get_server_info(args: Dict[str, Any]) -> Dict[str, Any]:
             prompt_version = get_prompt_version_only(
                 active_persona=ctx.active_persona,
                 active_skill=ctx.active_skill,
-                tools_count=tools_count
+                tools_count=tools_count,
+                model=None
             )
         except Exception:
             pass
@@ -159,7 +160,8 @@ def get_prompt_status(args: Dict[str, Any]) -> Dict[str, Any]:
             version = get_prompt_version_only(
                 active_persona=ctx.active_persona,
                 active_skill=ctx.active_skill,
-                tools_count=tools_count
+                tools_count=tools_count,
+                model=None
             )
         except Exception:
             names = ctx.get_active_names()
@@ -213,7 +215,8 @@ def get_current_context(args: Dict[str, Any]) -> Dict[str, Any]:
             version = get_prompt_version_only(
                 active_persona=ctx.active_persona,
                 active_skill=ctx.active_skill,
-                tools_count=tools_count
+                tools_count=tools_count,
+                model=None
             )
         except Exception:
             pass
