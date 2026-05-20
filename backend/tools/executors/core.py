@@ -24,7 +24,7 @@ SAFE_OPERATORS = {
 }
 
 
- logger = logging.getLogger("mcp.tools")
+logger = logging.getLogger("mcp.tools")
 
 
 def get_current_time(args: Dict[str, Any]) -> Dict[str, Any]:
@@ -359,80 +359,3 @@ def list_tools_by_category(args: Dict[str, Any]) -> Dict[str, Any]:
             "text": text
         }]
     }
-
-
-def get_weather(args: Dict[str, Any]) -> Dict[str, Any]:
-    city = args.get("city", "Zurich").strip()
-    if not city:
-        city = "Zurich"
-
-    logger.info(f"🌤️  Fetching weather for: {city}")
-
-    try:
-        with httpx.Client(timeout=15.0, follow_redirects=True) as client:
-            # wttr.in returns JSON with ?format=j1
-            resp = client.get(f"https://wttr.in/{city}?format=j1")
-            resp.raise_for_status()
-            data = resp.json()
-
-        current = data.get("current_condition", [{}])[0]
-        temp_c = current.get("temp_C", "?")
-        feels_like = current.get("FeelsLikeC", temp_c)
-        desc = current.get("weatherDesc", [{}])[0].get("value", "unknown")
-        humidity = current.get("humidity", "?")
-        wind = current.get("windspeedKmph", "?")
-
-        result_text = (
-            f"**Weather in {city}**\n"
-            f"• Temperature: {temp_c}°C (feels like {feels_like}°C)\n"
-            f"• Condition: {desc}\n"
-            f"• Humidity: {humidity}%\n"
-            f"• Wind: {wind} km/h"
-        )
-
-        return {
-            "content": [{"type": "text", "text": result_text}]
-        }
-
-    except httpx.RequestError as e:
-        logger.warning(f"Weather request failed for {city}: {e}")
-        return {
-            "content": [{"type": "text", "text": f"Could not fetch weather for '{city}'. Service may be temporarily unavailable."}],
-            "isError": True
-        }
-    except Exception as e:
-        logger.error(f"Unexpected error in get_weather: {e}")
-        return {
-            "content": [{"type": "text", "text": f"Weather error: {str(e)}"}],
-            "isError": True
-        }
-
-
-def get_public_ip(args: Dict[str, Any]) -> Dict[str, Any]:
-    logger.info("🌐 Fetching public IP address")
-
-    try:
-        with httpx.Client(timeout=10.0) as client:
-            resp = client.get("https://api.ipify.org?format=json")
-            resp.raise_for_status()
-            ip = resp.json().get("ip", "unknown")
-
-        return {
-            "content": [{
-                "type": "text",
-                "text": f"**Public IP:** {ip}"
-            }]
-        }
-
-    except httpx.RequestError as e:
-        logger.warning(f"Public IP request failed: {e}")
-        return {
-            "content": [{"type": "text", "text": "Could not determine public IP address."}],
-            "isError": True
-        }
-    except Exception as e:
-        logger.error(f"Unexpected error in get_public_ip: {e}")
-        return {
-            "content": [{"type": "text", "text": f"Error: {str(e)}"}],
-            "isError": True
-        }

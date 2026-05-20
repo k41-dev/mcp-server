@@ -5,11 +5,6 @@ memory.py - Memory Tools
 
 from typing import Dict, Any
 from backend.memory import DEFAULT_SESSION_ID
-import sqlite3
-from pathlib import Path
-
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-DB_PATH = PROJECT_ROOT / "data" / "chat_memory.db"
 
 
 def store_memory(args: Dict[str, Any]) -> Dict[str, Any]:
@@ -96,64 +91,3 @@ def _get_db_connection():
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     return conn
-
-
-def delete_memory(args: Dict[str, Any]) -> Dict[str, Any]:
-    memory_id = args.get("memory_id")
-    query = args.get("query", "").strip()
-
-    if not memory_id and not query:
-        return {
-            "content": [{"type": "text", "text": "Error: Either 'memory_id' or 'query' must be provided"}],
-            "isError": True
-        }
-
-    conn = _get_db_connection()
-    cur = conn.cursor()
-
-    try:
-        if memory_id is not None:
-            # Delete by exact ID
-            cur.execute("DELETE FROM long_term_memories WHERE id = ?", (memory_id,))
-            deleted = cur.rowcount
-            conn.commit()
-
-            if deleted == 0:
-                return {
-                    "content": [{"type": "text", "text": f"No memory found with ID {memory_id}"}],
-                    "isError": True
-                }
-
-            logger.info(f"🗑️ Deleted memory ID {memory_id}")
-            return {
-                "content": [{"type": "text", "text": f"✅ Memory with ID {memory_id} deleted."}]
-            }
-
-        else:
-            # Delete by fuzzy query (LIKE)
-            like_pattern = f"%{query}%"
-            cur.execute(
-                "DELETE FROM long_term_memories WHERE fact LIKE ?",
-                (like_pattern,)
-            )
-            deleted = cur.rowcount
-            conn.commit()
-
-            if deleted == 0:
-                return {
-                    "content": [{"type": "text", "text": f"No memories found matching '{query}'"}]
-                }
-
-            logger.info(f"🗑️ Deleted {deleted} memories matching '{query}'")
-            return {
-                "content": [{"type": "text", "text": f"✅ Deleted {deleted} memory(s) matching '{query}'."}]
-            }
-
-    except Exception as e:
-        logger.error(f"Error deleting memory: {e}")
-        return {
-            "content": [{"type": "text", "text": f"Error deleting memory: {str(e)}"}],
-            "isError": True
-        }
-    finally:
-        conn.close()

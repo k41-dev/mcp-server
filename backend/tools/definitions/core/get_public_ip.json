@@ -1,9 +1,0 @@
-{
-  "name": "get_public_ip",
-  "description": "Returns the current public IPv4 address of the MCP server (useful for debugging Docker, ngrok or network issues).",
-  "inputSchema": {
-    "type": "object",
-    "properties": {}
-  },
-  "category": "core"
-}
