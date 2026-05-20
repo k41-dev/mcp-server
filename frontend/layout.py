@@ -24,12 +24,20 @@ from components.prompt_viewer import get_system_prompt
 from components.mcp_client import get_mcp_tools
 from components.chat_handler import respond, get_status
 
-# Persona Control Funktionen
-from components.persona_control import (
-    apply_persona,
-    reset_persona,
-    load_initial_personas,
+# === Event Wiring (neu) ===
+from components.event_wiring import (
+    wire_persona_controls,
+    wire_skill_controls,
+    wire_tools_panel,
+    wire_memory_panel,
+    wire_chat_events,
+    wire_initial_demo_loads,
 )
+
+# === Temporäre Imports für demo.load() ===
+from components.persona_control import load_initial_personas
+from components.skill_control import load_initial_skills
+from components.tools_panel import get_tool_names
 
 # Skill Control Funktionen
 from components.skill_control import (
@@ -81,36 +89,19 @@ def create_ui():
                 # === Persona Control ===
                 persona_dropdown, intensity_slider, apply_btn, reset_btn, load_btn = create_persona_control()
 
-                # === Persona Event Wiring ===
-                apply_btn.click(
-                    apply_persona,
-                    inputs=[persona_dropdown, intensity_slider]
-                ).then(
-                    get_system_prompt,
-                    inputs=[model_choice],
-                    outputs=[system_prompt_box]
-                ).then(
-                    get_status,
-                    outputs=[conn_status, prompt_version, active_persona, active_skill]
-                )
-
-                reset_btn.click(
-                    reset_persona
-                ).then(
-                    get_system_prompt,
-                    inputs=[model_choice],
-                    outputs=[system_prompt_box]
-                ).then(
-                    get_status,
-                    outputs=[conn_status, prompt_version, active_persona, active_skill]
-                ).then(
-                    lambda: "Default",
-                    outputs=[persona_dropdown]
-                )
-
-                load_btn.click(
-                    load_initial_personas,
-                    outputs=[persona_dropdown]
+                # === Persona Event Wiring (jetzt über event_wiring.py) ===
+                wire_persona_controls(
+                    persona_dropdown=persona_dropdown,
+                    intensity_slider=intensity_slider,
+                    apply_btn=apply_btn,
+                    reset_btn=reset_btn,
+                    load_btn=load_btn,
+                    model_choice=model_choice,
+                    system_prompt_box=system_prompt_box,
+                    conn_status=conn_status,
+                    prompt_version=prompt_version,
+                    active_persona=active_persona,
+                    active_skill=active_skill,
                 )
 
                 # === Skill Control ===
