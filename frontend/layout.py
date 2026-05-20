@@ -2,14 +2,14 @@
 """
 layout.py - Zentrale UI-Layout-Datei (professionell modularisiert)
 
-Enthält die komplette Zusammenstellung der Gradio-Oberfläche.
-gradio_app.py wird dadurch zur reinen Einstiegsdatei.
+Enthält nur noch die reine Zusammenstellung der UI.
+Alle Event-Wiring ist ausgelagert in event_wiring.py.
 """
 
 from pathlib import Path
 import gradio as gr
 
-# === Komponenten + Handler Funktionen ===
+# === Komponenten ===
 from components import (
     create_status_bar,
     create_prompt_viewer,
@@ -24,7 +24,7 @@ from components.prompt_viewer import get_system_prompt
 from components.mcp_client import get_mcp_tools
 from components.chat_handler import respond, get_status
 
-# === Event Wiring (neu) ===
+# === Event Wiring ===
 from components.event_wiring import (
     wire_persona_controls,
     wire_skill_controls,
@@ -34,28 +34,7 @@ from components.event_wiring import (
     wire_initial_demo_loads,
 )
 
-# Skill Control Funktionen
-from components.skill_control import (
-    apply_skill,
-    reset_skill,
-    load_initial_skills,
-)
-
-# Tools Panel Funktionen
-from components.tools_panel import (
-    get_tool_names,
-    update_tool_info,
-    insert_tool,
-)
-
-# Memory Panel Funktionen
-from components.memory_panel import (
-    get_memories,
-    clear_memory,
-    get_chat_history,
-    clear_chat_history,
-    full_reset,
-)
+from components.tools_panel import get_tool_names
 
 
 def create_ui():
@@ -81,19 +60,9 @@ def create_ui():
                 # === System Prompt Viewer ===
                 system_prompt_box = create_prompt_viewer()
 
-                def _handle_model_change(model):
-                    return gr.update(value=get_system_prompt(model))
-
-                model_choice.change(
-                    fn=_handle_model_change,
-                    inputs=[model_choice],
-                    outputs=[system_prompt_box]
-                )
-
                 # === Persona Control ===
                 persona_dropdown, intensity_slider, apply_btn, reset_btn, load_btn = create_persona_control()
 
-                # === Persona Event Wiring (jetzt über event_wiring.py) ===
                 wire_persona_controls(
                     persona_dropdown=persona_dropdown,
                     intensity_slider=intensity_slider,
@@ -133,7 +102,6 @@ def create_ui():
                     initial_value=initial_tool_value
                 )
 
-                # Tools Event Wiring (über event_wiring.py)
                 wire_tools_panel(
                     tool_dropdown=tool_dropdown,
                     tool_info=tool_info,
@@ -145,7 +113,6 @@ def create_ui():
                 # === Memory Panel ===
                 memory_box, show_lt_btn, clear_lt_btn, show_chat_btn, clear_chat_btn, full_reset_btn = create_memory_panel()
 
-                # Memory Event Wiring
                 wire_memory_panel(
                     memory_box=memory_box,
                     show_lt_btn=show_lt_btn,
@@ -181,14 +148,5 @@ def create_ui():
             tool_dropdown=tool_dropdown,
         )
 
-        def _handle_model_change(model):
-            new_prompt = get_system_prompt(model)
-            return gr.update(value=new_prompt)
-
-        model_choice.change(
-            fn=_handle_model_change,
-            inputs=[model_choice],
-            outputs=[system_prompt_box]
-        )
 
     return demo

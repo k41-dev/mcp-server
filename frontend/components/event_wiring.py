@@ -1,42 +1,36 @@
 #!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 event_wiring.py - Zentrale Event-Wiring-Schicht für das Frontend
 
-Extrahiert alle .click(), .then(), .submit() und .load() Verbindungen
-aus layout.py. Dadurch bleibt layout.py übersichtlich und fokussiert
-auf die reine UI-Komposition.
-
-Alle Funktionen sind reine Side-Effect-Funktionen (kein Return-Wert).
+Alle .click(), .then(), .submit() und .load() Verbindungen
+sind hier zentralisiert. layout.py bleibt dadurch übersichtlich.
 """
 
 import gradio as gr
 
-# === Handler Imports (nur für Wiring) ===
+# === Handler Imports ===
 from components.prompt_viewer import get_system_prompt
 from components.chat_handler import respond, get_status
 
-# Persona
 from components.persona_control import (
     apply_persona,
     reset_persona,
     load_initial_personas,
 )
 
-# Skill
 from components.skill_control import (
     apply_skill,
     reset_skill,
     load_initial_skills,
 )
 
-# Tools
 from components.tools_panel import (
     get_tool_names,
     update_tool_info,
     insert_tool,
 )
 
-# Memory
 from components.memory_panel import (
     get_memories,
     clear_memory,
@@ -44,7 +38,6 @@ from components.memory_panel import (
     clear_chat_history,
     full_reset,
 )
-
 
 def wire_persona_controls(
     persona_dropdown,
