@@ -17,7 +17,8 @@ load_dotenv()
 
 
 # === Modular UI Components ===
-from components import create_status_bar
+from components.status_bar import create_status_bar
+from components.chat_panel import create_chat_panel
 from components.prompt_viewer import create_prompt_viewer, get_system_prompt
 from components.persona_control import create_persona_control, apply_persona, reset_persona, load_initial_personas
 from components.skill_control import create_skill_control, apply_skill, reset_skill, load_initial_skills
@@ -418,27 +419,8 @@ def create_ui():
         # ========== TWO COLUMN LAYOUT ==========
         with gr.Row(elem_classes=["main-layout"]):
             
-            # LEFT: Chat
-            with gr.Column(scale=3, elem_classes=["chat-column"]):
-                
-                chatbot = gr.Chatbot(
-                    label="Agent Conversation",
-                    height=800,
-                    show_label=True,
-                    avatar_images=(
-                        None,
-                        "https://api.dicebear.com/7.x/bottts/svg?seed=grok"
-                    ),
-                    elem_classes=["panel", "chat-panel"]
-                )
-            
-                with gr.Row():
-                    msg = gr.Textbox(
-                        placeholder="Type your message here...",
-                        scale=8,
-                        container=False
-                    )
-                    send_btn = gr.Button("Send", variant="primary", scale=1)
+            # ========== CHAT PANEL ==========
+            chatbot, msg, send_btn = create_chat_panel()
 
             # RIGHT: Menue
             with gr.Column(scale=1, elem_classes=["menue-column"]):
