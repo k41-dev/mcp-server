@@ -89,6 +89,35 @@ def _build_tool_status_message(model_display: str, context_line: str, tool_names
     )
 
 
+def _prepare_messages(history: list, user_message: str, provider: str = "grok"):
+    """
+    Bereitet die Messages-Liste für den Chat vor.
+    - Holt den aktuellen dynamischen Prompt
+    - Sanitized die History
+    - Fügt den System-Prompt nur hinzu, wenn nötig (Version-Check)
+    """
+    clean_history = _sanitize_history(history)
+
+    prompt_data = mcp_jsonrpc("prompts/get_dynamic", {"model": provider})
+    system_prompt = prompt_data.get("prompt", "") if prompt_data else ""
+    current_version = prompt_data.get("version", "v1") if prompt_data else "v1"
+
+    # Version-Check, ob System-Prompt neu mitgeschickt werden soll
+    func = _prepare_messages  # Referenz auf sich selbst für den Versions-Cache
+    if not hasattr(func, "_last_prompt_version"):
+        func._last_prompt_version = None
+
+    include_system = (len(clean_history) == 0 or current_version != func._last_prompt_version)
+
+    if include_system:
+        messages = [{"role": "system", "content": system_prompt}] + clean_history + [{"role": "user", "content": user_message}]
+        func._last_prompt_version = current_version
+    else:
+        messages = clean_history + [{"role": "user", "content": user_message}]
+
+    return messages, current_version
+
+
 # ====================== HISTORY ======================
 def _sanitize_history(history: list) -> list:
     """Convert any corrupted list content back to clean string."""
@@ -115,26 +144,13 @@ def _chat_with_agent_generator(message: str, history: list, model_choice: str):
     Am Ende yielded sie das finale Ergebnis.
     """
     tools = get_mcp_tools()
-    clean_history = _sanitize_history(history)
 
     is_grok = model_choice == "Grok"
     provider_name = "grok" if is_grok else "ollama"
     model_display = XAI_MODEL if is_grok else OLLAMA_MODEL
 
     # System Prompt
-    prompt_data = mcp_jsonrpc("prompts/get_dynamic", {"model": provider_name})
-    system_prompt = prompt_data.get("prompt", "") if prompt_data else ""
-    current_version = prompt_data.get("version", "v1") if prompt_data else "v1"
-
-    if not hasattr(_chat_with_agent_generator, "_last_prompt_version"):
-        _chat_with_agent_generator._last_prompt_version = None
-
-    include_system = (len(clean_history) == 0 or current_version != _chat_with_agent_generator._last_prompt_version)
-    if include_system:
-        messages = [{"role": "system", "content": system_prompt}] + clean_history + [{"role": "user", "content": message}]
-        _chat_with_agent_generator._last_prompt_version = current_version
-    else:
-        messages = clean_history + [{"role": "user", "content": message}]
+    messages, current_version = _prepare_messages(history, message, provider_name)
 
     context_line = _get_context_line()
     MAX_TURNS = 6 if is_grok else 4
@@ -263,11 +279,7 @@ def chat_with_agent_streaming(message: str, history: list, model_choice: str):
     provider_name = "grok" if is_grok else "ollama"
 
     # System Prompt
-    prompt_data = mcp_jsonrpc("prompts/get_dynamic", {"model": provider_name})
-    system_prompt = prompt_data.get("prompt", "") if prompt_data else ""
-
-    clean_history = _sanitize_history(history)
-    messages = [{"role": "system", "content": system_prompt}] + clean_history + [{"role": "user", "content": message}]
+    messages, _ = _prepare_messages(history, message, provider_name)
 
     context_line = _get_context_line()
 
@@ -410,26 +422,29 @@ def refresh_all(model_choice_value: str):
 
 def respond(user_message, chat_history, model):
     """
-    Hybrid-Modus mit sofortiger User-Message + ohne Duplizierung
+    Zentrale Einstiegsfunktion für den Hybrid-Chat.
+    - Zeigt User-Message sofort an
+    - Führt Tool-fähigen Agenten aus (inkl. Spinner + finales Streaming)
+    - Gibt Fehler sauber zurück
     """
     if not user_message or not user_message.strip():
         return chat_history, ""
 
-    # User-Message sofort persistieren
-    call_mcp_tool("add_chat_turn", {"role": "user", "content": user_message})
-
-    # === Sofortige Anzeige der User-Message (nur für die UI) ===
-    temp_history = chat_history + [{"role": "user", "content": user_message}]
-    yield temp_history, ""
-
     try:
-        final_history = None
+        # 1. User-Message persistieren
+        call_mcp_tool("add_chat_turn", {"role": "user", "content": user_message})
 
-        # Generator mit ORIGINALER History starten (nicht mit temp_history!)
+        # 2. User-Message sofort sichtbar machen
+        temp_history = chat_history + [{"role": "user", "content": user_message}]
+        yield temp_history, ""
+
+        # 3. Generator ausführen und Ergebnisse durchreichen
+        final_history = None
         for partial_history in _chat_with_agent_generator(user_message, chat_history, model):
             final_history = partial_history
             yield partial_history, ""
 
+        # 4. Fallback, falls Generator nichts zurückgegeben hat
         if final_history is None:
             yield temp_history, ""
             return temp_history, ""
@@ -437,7 +452,8 @@ def respond(user_message, chat_history, model):
         return final_history, ""
 
     except Exception as e:
-        error_history = temp_history + [
+        error_history = (chat_history or []) + [
+            {"role": "user", "content": user_message},
             {"role": "assistant", "content": f"❌ Fehler im Hybrid-Modus: {str(e)}"}
         ]
         yield error_history, ""
