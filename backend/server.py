@@ -20,6 +20,7 @@ from backend.tools.registry import registry as _registry
 from backend.prompt_builder import build_dynamic_system_prompt
 from backend.config import settings
 from backend.dependencies import AgentContextDep, RegistryDep, SettingsDep
+from backend.providers import get_provider
 
 
 # ====================== LOGGING ======================
@@ -223,6 +224,36 @@ async def mcp_handler(
             except Exception as e:
                 logger.error(f"Error building dynamic prompt: {e}")
                 result = {"prompt": "Error building prompt", "version": "error"}
+        elif method == "models/chat":
+            # Erwartet: {"provider": "grok" | "ollama", "messages": [...], "tools": [...], "temperature": 0.7, ...}
+            provider_name = (params or {}).get("provider") or (params or {}).get("model", "grok")
+            provider = get_provider(provider_name)
+
+            if not provider:
+                return MCPResponse(
+                    id=req_id,
+                    error=MCPError(code=-32602, message=f"Unknown provider: {provider_name}")
+                )
+
+            try:
+                # Wir rufen den Provider synchron auf (später bei Bedarf async machen)
+                import asyncio
+                result = asyncio.run(provider.chat(
+                    messages=(params or {}).get("messages", []),
+                    tools=(params or {}).get("tools"),
+                    temperature=(params or {}).get("temperature", 0.7),
+                    max_tokens=(params or {}).get("max_tokens"),
+                    stream=False
+                ))
+
+                return MCPResponse(id=req_id, result=result)
+
+            except Exception as e:
+                logger.error(f"models/chat error for provider {provider_name}: {e}")
+                return MCPResponse(
+                    id=req_id,
+                    error=MCPError(code=-32603, message=f"Provider error: {str(e)}")
+                )
 
         else:
             return MCPResponse(id=req_id, error=MCPError(code=-32601, message=f"Method not found: {method}"))
