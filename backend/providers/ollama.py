@@ -25,39 +25,55 @@ class OllamaProvider(ModelProvider):
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
         stream: bool = False,
-    ) -> Dict[str, Any]:
-        resp = await asyncio.to_thread(
-            self.client.chat,
-            model=self.model,
-            messages=messages,
-            tools=tools,
-            stream=stream
-        )
+    ) -> Dict[str, Any] | Any:
+        import asyncio
+        import json
 
-        message_obj = resp.get("message", {}) if not stream else {}
-        content = message_obj.get("content", "") or ""
-        tool_calls = message_obj.get("tool_calls", []) or []
+        if stream:
+            # Streaming-Pfad
+            stream_response = await asyncio.to_thread(
+                self.client.chat,
+                model=self.model,
+                messages=messages,
+                tools=tools,
+                stream=True
+            )
+            return stream_response   # Gibt den Ollama-Stream-Iterator zurück
 
-        # Raw-JSON Fallback
-        if not tool_calls and isinstance(content, str) and content.strip().startswith("{"):
-            try:
-                parsed = json.loads(content.strip())
-                if isinstance(parsed, dict) and parsed.get("name"):
-                    tool_calls = [{
-                        "function": {
-                            "name": parsed.get("name"),
-                            "arguments": parsed.get("parameters") or parsed.get("arguments") or {}
-                        }
-                    }]
-                    content = ""
-            except:
-                pass
+        else:
+            # Non-Streaming-Pfad
+            resp = await asyncio.to_thread(
+                self.client.chat,
+                model=self.model,
+                messages=messages,
+                tools=tools,
+                stream=False
+            )
 
-        return {
-            "content": content,
-            "tool_calls": tool_calls,
-            "raw": resp
-        }
+            message_obj = resp.get("message", {}) or {}
+            content = message_obj.get("content", "") or ""
+            tool_calls = message_obj.get("tool_calls", []) or []
+
+            # Raw-JSON Fallback (wie bisher)
+            if not tool_calls and isinstance(content, str) and content.strip().startswith("{"):
+                try:
+                    parsed = json.loads(content.strip())
+                    if isinstance(parsed, dict) and parsed.get("name"):
+                        tool_calls = [{
+                            "function": {
+                                "name": parsed.get("name"),
+                                "arguments": parsed.get("parameters") or parsed.get("arguments") or {}
+                            }
+                        }]
+                        content = ""
+                except:
+                    pass
+
+            return {
+                "content": content,
+                "tool_calls": tool_calls,
+                "raw": resp
+            }
 
 
 # Automatisch registrieren

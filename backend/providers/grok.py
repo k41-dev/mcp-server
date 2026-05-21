@@ -21,8 +21,7 @@ class GrokProvider(ModelProvider):
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
         stream: bool = False,
-    ) -> Dict[str, Any]:
-        # Lazy Import – erst beim ersten Chat-Aufruf
+    ) -> Dict[str, Any] | Any:
         if self.client is None:
             from openai import OpenAI
             self.client = OpenAI(
@@ -34,21 +33,36 @@ class GrokProvider(ModelProvider):
             raise RuntimeError("XAI_API_KEY not configured")
 
         import asyncio
-        response = await asyncio.to_thread(
-            self.client.chat.completions.create,
-            model=settings.XAI_MODEL,
-            messages=messages,
-            tools=tools,
-            tool_choice="auto",
-            temperature=temperature,
-            max_tokens=max_tokens,
-            stream=stream,
-        )
 
-        if not stream:
+        if stream:
+            # Streaming-Pfad
+            stream_response = await asyncio.to_thread(
+                self.client.chat.completions.create,
+                model=settings.XAI_MODEL,
+                messages=messages,
+                tools=tools,
+                tool_choice="auto" if tools else None,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=True
+            )
+            return stream_response   # Gibt den OpenAI-Stream-Iterator zurück
+
+        else:
+            # Non-Streaming-Pfad (wie bisher)
+            response = await asyncio.to_thread(
+                self.client.chat.completions.create,
+                model=settings.XAI_MODEL,
+                messages=messages,
+                tools=tools,
+                tool_choice="auto" if tools else None,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=False
+            )
+
             msg = response.choices[0].message
 
-            # WICHTIG: Tool-Calls explizit in normale Dicts umwandeln
             tool_calls = None
             if msg.tool_calls:
                 tool_calls = [
@@ -68,8 +82,6 @@ class GrokProvider(ModelProvider):
                 "tool_calls": tool_calls,
                 "raw": response.model_dump()
             }
-
-        return {"content": "", "tool_calls": None, "raw": response.model_dump()}
 
 
 # Automatisch registrieren
