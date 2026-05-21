@@ -10,12 +10,14 @@ from typing import Any, Dict, List, Optional, Literal
 import json
 import os
 import logging
+from starlette.responses import StreamingResponse
 from backend.tools import (
     registry,
     DEFAULT_SESSION_ID,
     refresh_default_session,
     execute_tool
 )
+from backend.providers import get_provider
 from backend.tools.registry import registry as _registry
 from backend.prompt_builder import build_dynamic_system_prompt
 from backend.config import settings
@@ -267,6 +269,73 @@ async def mcp_handler(
     except Exception as e:
         logger.error(f"Error executing {method}: {e}")
         return MCPResponse(id=req_id, error=MCPError(code=-32603, message=str(e)))
+
+
+@app.post("/mcp/stream")
+async def mcp_stream_handler(request: Request):
+    """
+    Improved streaming endpoint using Server-Sent Events (SSE) style.
+    Currently supports simple text streaming without tool calling.
+    """
+    body = await request.json()
+    params = body.get("params", {}) if isinstance(body, dict) else {}
+
+    provider_name = params.get("provider") or params.get("model", "grok")
+    provider = get_provider(provider_name)
+
+    if not provider:
+        return {"error": f"Unknown provider: {provider_name}"}
+
+    messages = params.get("messages", [])
+    tools = params.get("tools")
+    temperature = params.get("temperature", 0.7)
+    max_tokens = params.get("max_tokens")
+
+    try:
+        stream = await provider.chat(
+            messages=messages,
+            tools=tools,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            stream=True
+        )
+
+        async def stream_generator():
+            try:
+                if provider_name == "grok":
+                    # OpenAI / Grok streaming
+                    for chunk in stream:
+                        if chunk.choices:
+                            delta = chunk.choices[0].delta
+                            if delta and delta.content:
+                                yield f"data: {delta.content}\n\n"
+
+                elif provider_name == "ollama":
+                    # Ollama streaming
+                    for chunk in stream:
+                        content = chunk.get("message", {}).get("content", "")
+                        if content:
+                            yield f"data: {content}\n\n"
+
+                # Signal end of stream
+                yield "data: [DONE]\n\n"
+
+            except Exception as e:
+                yield f"data: [ERROR] {str(e)}\n\n"
+
+        return StreamingResponse(
+            stream_generator(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no"
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Streaming error for provider {provider_name}: {e}")
+        return {"error": str(e)}
 
 
 # ====================== DYNAMIC OPENAPI SPEC ======================
