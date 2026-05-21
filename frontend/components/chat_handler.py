@@ -182,7 +182,26 @@ def _chat_with_agent_generator(message: str, history: list, model_choice: str):
             if content:
                 call_mcp_tool("add_chat_turn", {"role": "assistant", "content": content})
 
-            final_history = history + [{"role": "user", "content": message}, {"role": "assistant", "content": final_msg}]
+            # === Finale Antwort progressiv streamen ===
+            base_history = history + [{"role": "user", "content": message}]
+
+            # Besserer Split: Nach Sätzen + Absätzen (erhält Markdown besser)
+            import re
+            chunks = re.split(r'(?<=[.!?])\s+|\n\s*\n', final_msg.strip())
+            chunks = [c.strip() for c in chunks if c.strip()]
+
+            streamed_content = ""
+
+            for i, chunk in enumerate(chunks):
+                streamed_content += chunk + "\n\n"
+                current_msg = streamed_content.strip()
+
+                yield base_history + [{"role": "assistant", "content": current_msg}]
+                import time
+                time.sleep(0.12)   # Etwas längere Pause zwischen Absätzen/Sätzen
+
+            # Finalen kompletten Zustand yielden
+            final_history = base_history + [{"role": "assistant", "content": final_msg}]
             yield final_history
             return
 
