@@ -46,6 +46,49 @@ def _get_context_line() -> str:
     return " • ".join(context_parts) if context_parts else ""
 
 
+def _stream_final_answer(base_history: list, final_msg: str):
+    """
+    Streamt die finale Antwort satz-/absatzweise und erhält dabei die Formatierung besser.
+    """
+    import re
+    import time
+
+    chunks = re.split(r'(?<=[.!?])\s+|\n\s*\n', final_msg.strip())
+    chunks = [c.strip() for c in chunks if c.strip()]
+
+    streamed_content = ""
+
+    for i, chunk in enumerate(chunks):
+        streamed_content += chunk + "\n\n"
+        current_msg = streamed_content.strip()
+
+        yield base_history + [{"role": "assistant", "content": current_msg}]
+        time.sleep(0.12)
+
+    # Finalen kompletten Zustand
+    yield base_history + [{"role": "assistant", "content": final_msg}]
+
+
+def _build_tool_status_message(model_display: str, context_line: str, tool_names: list, step_count: int) -> str:
+    """
+    Erzeugt die Status-Nachricht während der Tool-Ausführung inklusive rotierendem Spinner.
+    """
+    if not tool_names:
+        return f"**{model_display}**\n*{context_line}*\n\n🔧 Verarbeite Tools ..."
+
+    tool_list = ", ".join([f"`{name}`" for name in tool_names])
+
+    # Rotierender Spinner
+    spinner_frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+    frame = spinner_frames[step_count % len(spinner_frames)]
+
+    return (
+        f"**{model_display}**\n"
+        f"*{context_line}*\n\n"
+        f"{frame}  **Führe Tool(s) aus:** {tool_list}"
+    )
+
+
 # ====================== HISTORY ======================
 def _sanitize_history(history: list) -> list:
     """Convert any corrupted list content back to clean string."""
@@ -147,24 +190,18 @@ def _chat_with_agent_generator(message: str, history: list, model_choice: str):
                 current_history = history + [{"role": "user", "content": message}]
 
                 if tool_names:
-                    tool_list = ", ".join([f"`{name}`" for name in tool_names])
-
-                    # Guter rotierender Spinner (Braille-Style)
-                    spinner_frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
-
-                    for i in range(12):   # 12 Frames = ca. 2,4 Sekunden Animation
-                        frame = spinner_frames[i % len(spinner_frames)]
-
-                        status_msg = (
-                            f"{model_display}\n"
-                            f"{context_line}\n\n"
-                            f"{frame}  Führe Tool(s) aus: {tool_list}"
+                    # === Tool-Status mit rotierendem Spinner (über Hilfsfunktion) ===
+                    for i in range(12):
+                        status_msg = _build_tool_status_message(
+                            model_display=model_display,
+                            context_line=context_line,
+                            tool_names=tool_names,
+                            step_count=i
                         )
 
                         yield current_history + [{"role": "assistant", "content": status_msg}]
                         import time
-                        time.sleep(0.20)   # Etwas schnelleres Rotieren
-
+                        time.sleep(0.20)
                 else:
                     status_msg = f"**{model_display}**\n*{context_line}*\n\n🔧 Verarbeite Tools ..."
                     yield current_history + [{"role": "assistant", "content": status_msg}]
@@ -185,24 +222,9 @@ def _chat_with_agent_generator(message: str, history: list, model_choice: str):
             # === Finale Antwort progressiv streamen ===
             base_history = history + [{"role": "user", "content": message}]
 
-            # Besserer Split: Nach Sätzen + Absätzen (erhält Markdown besser)
-            import re
-            chunks = re.split(r'(?<=[.!?])\s+|\n\s*\n', final_msg.strip())
-            chunks = [c.strip() for c in chunks if c.strip()]
+            for partial in _stream_final_answer(base_history, final_msg):
+                yield partial
 
-            streamed_content = ""
-
-            for i, chunk in enumerate(chunks):
-                streamed_content += chunk + "\n\n"
-                current_msg = streamed_content.strip()
-
-                yield base_history + [{"role": "assistant", "content": current_msg}]
-                import time
-                time.sleep(0.12)   # Etwas längere Pause zwischen Absätzen/Sätzen
-
-            # Finalen kompletten Zustand yielden
-            final_history = base_history + [{"role": "assistant", "content": final_msg}]
-            yield final_history
             return
 
         except Exception as e:
