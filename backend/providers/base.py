@@ -21,7 +21,6 @@ class ModelProvider(ABC):
     supports_streaming: bool = True
     supports_tool_calling: bool = True
 
-    @abstractmethod
     async def chat(
         self,
         messages: List[Dict[str, Any]],
@@ -30,15 +29,13 @@ class ModelProvider(ABC):
         max_tokens: Optional[int] = None,
         stream: bool = False,
     ) -> Dict[str, Any]:
-        """Einheitliche Chat-Schnittstelle. Muss von jedem Provider implementiert werden."""
-        pass
+        """Jeder Provider muss diese Methode implementieren."""
+        raise NotImplementedError(f"Provider '{self.name}' hat chat() nicht implementiert.")
 
     def convert_tools(self, tools: List[Dict]) -> List[Dict]:
-        """Default: OpenAI-kompatibles Format. Kann von Providern überschrieben werden."""
         return tools
 
     def parse_tool_calls(self, response: Any) -> List[ToolCall]:
-        """Standard-Parsing. Wird von Ollama/Claude/Gemini angepasst."""
         return []
 
 

@@ -4,6 +4,7 @@ ollama.py - Lokaler Ollama Provider mit defensivem Tool-Calling
 
 import ollama
 import json
+import asyncio
 from typing import List, Dict, Any, Optional
 from backend.config import settings
 from .base import ModelProvider, ToolCall, register_provider
@@ -25,7 +26,8 @@ class OllamaProvider(ModelProvider):
         max_tokens: Optional[int] = None,
         stream: bool = False,
     ) -> Dict[str, Any]:
-        resp = self.client.chat(
+        resp = await asyncio.to_thread(
+            self.client.chat,
             model=self.model,
             messages=messages,
             tools=tools,
@@ -36,7 +38,7 @@ class OllamaProvider(ModelProvider):
         content = message_obj.get("content", "") or ""
         tool_calls = message_obj.get("tool_calls", []) or []
 
-        # === Raw-JSON Fallback (wie bisher in chat_handler.py) ===
+        # Raw-JSON Fallback
         if not tool_calls and isinstance(content, str) and content.strip().startswith("{"):
             try:
                 parsed = json.loads(content.strip())

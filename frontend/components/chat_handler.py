@@ -45,6 +45,7 @@ def chat_with_agent(message: str, history: list, model_choice: str):
     clean_history = _sanitize_history(history)
 
     is_grok = model_choice == "Grok"
+    provider_name = "grok" if is_grok else "ollama"
     model_display = XAI_MODEL if is_grok else OLLAMA_MODEL
 
     prompt_data = mcp_jsonrpc("prompts/get_dynamic", {"model": "grok" if is_grok else "ollama"})
@@ -61,7 +62,7 @@ def chat_with_agent(message: str, history: list, model_choice: str):
     else:
         messages = clean_history + [{"role": "user", "content": message}]
 
-    # Active Persona + Skill (für Context Line)
+    # === Active Persona + Skill Context Line (bleibt unverändert) ===
     active_persona_name = "None"
     active_skill_name = "None"
     try:
@@ -87,101 +88,70 @@ def chat_with_agent(message: str, history: list, model_choice: str):
         context_parts.append(f"🛠️ {active_skill_name}")
     context_line = " • ".join(context_parts) if context_parts else ""
 
-    # ========== GROK PATH ==========
-    if is_grok:
-        if not openai_client:
-            return history + [{"role": "user", "content": message}, {"role": "assistant", "content": "❌ XAI_API_KEY fehlt"}]
+    # ========== EINHEITLICHER MCP-PFAD ==========
+    MAX_TURNS = 6 if is_grok else 4
+    tool_steps = []
 
-        grok_messages = [{"role": "system", "content": system_prompt}] + clean_history + [{"role": "user", "content": message}]
-        tool_steps = []
-
-        for _ in range(6):
-            try:
-                response = openai_client.chat.completions.create(
-                    model=XAI_MODEL, messages=grok_messages, tools=tools if tools else None, tool_choice="auto", temperature=0.7
-                )
-                msg = response.choices[0].message
-                if msg.tool_calls:
-                    grok_messages.append(msg.model_dump(exclude_none=True))
-                    for tc in msg.tool_calls:
-                        tool_name = tc.function.name
-                        args = json.loads(tc.function.arguments or "{}")
-                        result = call_mcp_tool(tool_name, args)
-                        tool_steps.append(f"🔧 `{tool_name}`")
-                        grok_messages.append({"role": "tool", "tool_call_id": tc.id, "content": result})
-                    continue
-
-                content = msg.content or "(No response)"
-                final_msg = f"**{model_display}**"
-                if context_line:
-                    final_msg += f"\n*{context_line}*"
-                final_msg += f"\n\n{content}"
-                if tool_steps:
-                    final_msg += "\n\n" + "\n".join(tool_steps)
-
-                if content:
-                    call_mcp_tool("add_chat_turn", {"role": "assistant", "content": content})
-
-                return history + [{"role": "user", "content": message}, {"role": "assistant", "content": final_msg}]
-            except Exception as e:
-                return history + [{"role": "user", "content": message}, {"role": "assistant", "content": f"Error: {str(e)}"}]
-
-        return history + [{"role": "user", "content": message}, {"role": "assistant", "content": "Max tool turns reached."}]
-
-    # ========== OLLAMA PATH ==========
-    else:
+    for _ in range(MAX_TURNS):
         try:
-            ollama_client = ollama.Client(host=OLLAMA_URL)
-            messages = [{"role": "system", "content": system_prompt}] + clean_history + [{"role": "user", "content": message}]
-            MAX_TURNS = 4
-            tool_steps = []
+            result = mcp_jsonrpc("models/chat", {
+                "provider": provider_name,
+                "messages": messages,
+                "tools": tools if tools else None,
+                "temperature": 0.7
+            })
 
-            for _ in range(MAX_TURNS):
-                resp = ollama_client.chat(model=OLLAMA_MODEL, messages=messages, tools=tools if tools else None)
-                message_obj = resp.get("message", {})
-                content = message_obj.get("content", "") or ""
-                tool_calls = message_obj.get("tool_calls", []) or []
+            if result and isinstance(result, dict) and "error" in result:
+                return history + [{"role": "user", "content": message}, {"role": "assistant", "content": f"❌ MCP Error: {result['error']}"}]
 
-                # Raw-JSON Fallback
-                if not tool_calls and isinstance(content, str) and content.strip().startswith("{"):
-                    try:
-                        parsed = json.loads(content.strip())
-                        if isinstance(parsed, dict) and parsed.get("name"):
-                            if any(t["function"]["name"] == parsed["name"] for t in tools):
-                                tool_calls = [{"function": {"name": parsed["name"], "arguments": parsed.get("parameters") or parsed.get("arguments") or {}}}]
-                                content = ""
-                    except:
-                        pass
+            content = result.get("content", "") or ""
+            tool_calls = result.get("tool_calls", []) or []
 
-                if tool_calls:
-                    messages.append({"role": "assistant", "content": content, "tool_calls": tool_calls})
-                    for tc in tool_calls:
-                        func = tc.get("function", {})
-                        tool_name = func.get("name")
-                        args = func.get("arguments", {})
-                        if isinstance(args, str):
-                            try: args = json.loads(args)
-                            except: args = {}
-                        if tool_name and any(t["function"]["name"] == tool_name for t in tools):
-                            result = call_mcp_tool(tool_name, args)
-                            tool_steps.append(f"🔧 `{tool_name}`")
-                            messages.append({"role": "tool", "content": result})
-                    continue
+            if tool_calls:
+                # Tool-Calls vorhanden → Messages erweitern und Tools ausführen
+                messages.append({
+                    "role": "assistant",
+                    "content": content,
+                    "tool_calls": tool_calls
+                })
 
-                final_msg = f"**{model_display}**"
-                if context_line:
-                    final_msg += f"\n*{context_line}*"
-                final_msg += f"\n\n{content or ''}"
-                if tool_steps:
-                    final_msg += "\n\n" + "\n".join(tool_steps)
+                for tc in tool_calls:
+                    func = tc.get("function", {})
+                    tool_name = func.get("name")
+                    args = func.get("arguments", {})
+                    if isinstance(args, str):
+                        try:
+                            args = json.loads(args)
+                        except:
+                            args = {}
 
-                if content:
-                    call_mcp_tool("add_chat_turn", {"role": "assistant", "content": content})
+                    if tool_name:
+                        tool_steps.append(f"🔧 `{tool_name}`")
+                        tool_result = call_mcp_tool(tool_name, args)
+                        messages.append({
+                            "role": "tool",
+                            "content": tool_result,
+                            "tool_call_id": tc.get("id", "")
+                        })
+                continue
 
-                return history + [{"role": "user", "content": message}, {"role": "assistant", "content": final_msg}]
+            # === Keine Tool-Calls → Finale Antwort ===
+            final_msg = f"**{model_display}**"
+            if context_line:
+                final_msg += f"\n*{context_line}*"
+            final_msg += f"\n\n{content or ''}"
+            if tool_steps:
+                final_msg += "\n\n" + "\n".join(tool_steps)
+
+            if content:
+                call_mcp_tool("add_chat_turn", {"role": "assistant", "content": content})
+
+            return history + [{"role": "user", "content": message}, {"role": "assistant", "content": final_msg}]
 
         except Exception as e:
-            return history + [{"role": "user", "content": message}, {"role": "assistant", "content": f"Ollama error: {str(e)}"}]
+            return history + [{"role": "user", "content": message}, {"role": "assistant", "content": f"Error: {str(e)}"}]
+
+    return history + [{"role": "user", "content": message}, {"role": "assistant", "content": "Max tool turns reached."}]
 
 
 # ====================== STATUS & REFRESH ======================

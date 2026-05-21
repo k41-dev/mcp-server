@@ -1,11 +1,10 @@
 """
-grok.py - xAI Grok Provider (OpenAI-kompatibel)
+grok.py - xAI Grok Provider (OpenAI-kompatibel) – korrigiert
 """
 
-from openai import OpenAI
 from typing import List, Dict, Any, Optional
 from backend.config import settings
-from .base import ModelProvider, ToolCall, register_provider
+from .base import ModelProvider, register_provider
 
 
 class GrokProvider(ModelProvider):
@@ -13,10 +12,7 @@ class GrokProvider(ModelProvider):
     supports_tool_calling = True
 
     def __init__(self):
-        self.client = OpenAI(
-            api_key=settings.XAI_API_KEY,
-            base_url="https://api.x.ai/v1"
-        ) if settings.XAI_API_KEY else None
+        self.client = None
 
     async def chat(
         self,
@@ -26,10 +22,20 @@ class GrokProvider(ModelProvider):
         max_tokens: Optional[int] = None,
         stream: bool = False,
     ) -> Dict[str, Any]:
+        # Lazy Import – erst beim ersten Chat-Aufruf
+        if self.client is None:
+            from openai import OpenAI
+            self.client = OpenAI(
+                api_key=settings.XAI_API_KEY,
+                base_url="https://api.x.ai/v1"
+            ) if settings.XAI_API_KEY else None
+
         if not self.client:
             raise RuntimeError("XAI_API_KEY not configured")
 
-        response = self.client.chat.completions.create(
+        import asyncio
+        response = await asyncio.to_thread(
+            self.client.chat.completions.create,
             model=settings.XAI_MODEL,
             messages=messages,
             tools=tools,
@@ -39,15 +45,31 @@ class GrokProvider(ModelProvider):
             stream=stream,
         )
 
-        # Für nicht-streaming (aktueller Use-Case)
         if not stream:
             msg = response.choices[0].message
+
+            # WICHTIG: Tool-Calls explizit in normale Dicts umwandeln
+            tool_calls = None
+            if msg.tool_calls:
+                tool_calls = [
+                    {
+                        "id": tc.id,
+                        "type": tc.type,
+                        "function": {
+                            "name": tc.function.name,
+                            "arguments": tc.function.arguments
+                        }
+                    }
+                    for tc in msg.tool_calls
+                ]
+
             return {
                 "content": msg.content or "",
-                "tool_calls": msg.tool_calls,
+                "tool_calls": tool_calls,
                 "raw": response.model_dump()
             }
-        return {"content": "", "tool_calls": None, "raw": response}  # Stream-Handling kommt später
+
+        return {"content": "", "tool_calls": None, "raw": response.model_dump()}
 
 
 # Automatisch registrieren
