@@ -10,9 +10,8 @@ from .mcp_client import mcp_jsonrpc, call_mcp_tool, get_mcp_tools
 
 
 XAI_API_KEY = os.getenv("XAI_API_KEY")
-XAI_MODEL = os.getenv("XAI_MODEL")
-OLLAMA_URL = os.getenv("OLLAMA_URL")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL")
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 
 # ====================== HELPER ======================
@@ -145,15 +144,28 @@ def _chat_with_agent_generator(message: str, history: list, model_choice: str):
     """
     tools = get_mcp_tools()
 
-    is_grok = model_choice == "Grok"
-    provider_name = "grok" if is_grok else "ollama"
-    model_display = XAI_MODEL if is_grok else OLLAMA_MODEL
+    # === Provider-Mapping ===
+    if model_choice == "Grok":
+        provider_name = "grok"
+        model_display = os.getenv("XAI_MODEL")
+        MAX_TURNS = 6
+    elif model_choice == "OpenAI":
+        provider_name = "openai"
+        model_display = os.getenv("OPENAI_MODEL")
+        MAX_TURNS = 6
+    elif model_choice == "Anthropic":
+        provider_name = "anthropic"
+        model_display = os.getenv("ANTHROPIC_MODEL")
+        MAX_TURNS = 5
+    else:  # Ollama (Default)
+        provider_name = "ollama"
+        model_display = os.getenv("OLLAMA_MODEL")
+        MAX_TURNS = 4
 
     # System Prompt
     messages, current_version = _prepare_messages(history, message, provider_name)
 
     context_line = _get_context_line()
-    MAX_TURNS = 6 if is_grok else 4
     tool_steps = []
 
     for _ in range(MAX_TURNS):
@@ -274,9 +286,23 @@ def chat_with_agent_streaming(message: str, history: list, model_choice: str):
     """
     import time
 
-    is_grok = model_choice == "Grok"
-    model_display = XAI_MODEL if is_grok else OLLAMA_MODEL
-    provider_name = "grok" if is_grok else "ollama"
+    # === Provider-Mapping ===
+    if model_choice == "Grok":
+        provider_name = "grok"
+        model_display = os.getenv("XAI_MODEL")
+        MAX_TURNS = 6
+    elif model_choice == "OpenAI":
+        provider_name = "openai"
+        model_display = os.getenv("OPENAI_MODEL")
+        MAX_TURNS = 6
+    elif model_choice == "Anthropic":
+        provider_name = "anthropic"
+        model_display = os.getenv("ANTHROPIC_MODEL")
+        MAX_TURNS = 5
+    else:  # Ollama (Default)
+        provider_name = "ollama"
+        model_display = os.getenv("OLLAMA_MODEL")
+        MAX_TURNS = 4
 
     # System Prompt
     messages, _ = _prepare_messages(history, message, provider_name)
@@ -372,7 +398,14 @@ def get_status(model_choice_value: str = "Grok"):
         except Exception:
             tool_count = 0
 
-        model_for_prompt = "grok" if model_choice_value == "Grok" else "ollama"
+        # === Erweitertes Provider-Mapping ===
+        model_map = {
+            "Grok": "grok",
+            "OpenAI": "openai",
+            "Anthropic": "anthropic",
+            "Ollama": "ollama"
+        }
+        model_for_prompt = model_map.get(model_choice_value, "grok")
 
         # Active Persona & Skill holen
         persona_name = "None"
