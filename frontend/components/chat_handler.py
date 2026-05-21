@@ -114,12 +114,15 @@ def _chat_with_agent_generator(message: str, history: list, model_choice: str):
             tool_calls = result.get("tool_calls", []) or []
 
             if tool_calls:
+                # Tool-Calls vorhanden → Messages erweitern und Tools ausführen
                 messages.append({
                     "role": "assistant",
                     "content": content,
                     "tool_calls": tool_calls
                 })
 
+                # === Tool-Namen für die Anzeige sammeln ===
+                tool_names = []
                 for tc in tool_calls:
                     func = tc.get("function", {})
                     tool_name = func.get("name")
@@ -131,6 +134,7 @@ def _chat_with_agent_generator(message: str, history: list, model_choice: str):
                             args = {}
 
                     if tool_name:
+                        tool_names.append(tool_name)
                         tool_steps.append(f"🔧 `{tool_name}`")
                         tool_result = call_mcp_tool(tool_name, args)
                         messages.append({
@@ -139,10 +143,32 @@ def _chat_with_agent_generator(message: str, history: list, model_choice: str):
                             "tool_call_id": tc.get("id", "")
                         })
 
-                # === WICHTIG: Nach jedem Tool-Round yielden ===
+                # === Bessere Live-Darstellung mit Aktivitäts-Indikator ===
                 current_history = history + [{"role": "user", "content": message}]
-                # Optional: Tool-Schritte schon sichtbar machen
-                yield current_history + [{"role": "assistant", "content": f"**{model_display}**\n*{context_line}*\n\nVerarbeite Tools..."}]
+
+                if tool_names:
+                    tool_list = ", ".join([f"`{name}`" for name in tool_names])
+
+                    # Guter rotierender Spinner (Braille-Style)
+                    spinner_frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+
+                    for i in range(12):   # 12 Frames = ca. 2,4 Sekunden Animation
+                        frame = spinner_frames[i % len(spinner_frames)]
+
+                        status_msg = (
+                            f"{model_display}\n"
+                            f"{context_line}\n\n"
+                            f"{frame}  Führe Tool(s) aus: {tool_list}"
+                        )
+
+                        yield current_history + [{"role": "assistant", "content": status_msg}]
+                        import time
+                        time.sleep(0.20)   # Etwas schnelleres Rotieren
+
+                else:
+                    status_msg = f"**{model_display}**\n*{context_line}*\n\n🔧 Verarbeite Tools ..."
+                    yield current_history + [{"role": "assistant", "content": status_msg}]
+
                 continue
 
             # === Keine Tool-Calls mehr → Finale Antwort ===
@@ -343,10 +369,7 @@ def refresh_all(model_choice_value: str):
 
 def respond(user_message, chat_history, model):
     """
-    Hybrid-Modus (Generator-basiert)
-    - Nutzt _chat_with_agent_generator für Tool-Support + Fortschritt
-    - Zeigt Tool-Aktivität live
-    - Streamt die finale Antwort
+    Hybrid-Modus mit sofortiger User-Message + ohne Duplizierung
     """
     if not user_message or not user_message.strip():
         return chat_history, ""
@@ -354,23 +377,26 @@ def respond(user_message, chat_history, model):
     # User-Message sofort persistieren
     call_mcp_tool("add_chat_turn", {"role": "user", "content": user_message})
 
+    # === Sofortige Anzeige der User-Message (nur für die UI) ===
+    temp_history = chat_history + [{"role": "user", "content": user_message}]
+    yield temp_history, ""
+
     try:
         final_history = None
 
-        # Generator konsumieren und Zwischenergebnisse yielden
+        # Generator mit ORIGINALER History starten (nicht mit temp_history!)
         for partial_history in _chat_with_agent_generator(user_message, chat_history, model):
             final_history = partial_history
             yield partial_history, ""
 
-        # Falls der Generator nichts zurückgegeben hat (sollte nicht passieren)
         if final_history is None:
-            yield chat_history, ""
-            return chat_history, ""
+            yield temp_history, ""
+            return temp_history, ""
 
         return final_history, ""
 
     except Exception as e:
-        error_history = chat_history + [
+        error_history = temp_history + [
             {"role": "assistant", "content": f"❌ Fehler im Hybrid-Modus: {str(e)}"}
         ]
         yield error_history, ""
