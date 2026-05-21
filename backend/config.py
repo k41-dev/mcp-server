@@ -25,6 +25,14 @@ class Settings:
     OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "llama3.1:latest")
     OLLAMA_EMBED_MODEL: str = os.getenv("OLLAMA_EMBED_MODEL", "nomic-embed-text")
 
+    # === Other ===
+    ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")      # für GPT-4o, o1 etc.
+    GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
+
+    # === Default ===
+    DEFAULT_MODEL_PROVIDER: str = os.getenv("DEFAULT_MODEL_PROVIDER", "grok")
+
     # === MCP Server ===
     MCP_PUBLIC_URL: str = os.getenv("MCP_PUBLIC_URL", "http://localhost:8321")
     MCP_API_KEY: str = os.getenv("MCP_API_KEY", "")

@@ -22,10 +22,19 @@ OLLAMA_MODEL = settings.OLLAMA_MODEL
 
 
 def _get_model_family(model_name: str) -> str:
-    """Determine whether we should use Grok or Ollama base prompt."""
-    name = model_name.lower()
-    if "grok" in name:
+    """Determine model family for prompt selection and provider routing."""
+    if not model_name:
         return "grok"
+
+    name = model_name.lower()
+    if "grok" in name or "xai" in name:
+        return "grok"
+    if "claude" in name or "anthropic" in name:
+        return "anthropic"
+    if "gpt" in name or "o1" in name or "openai" in name:
+        return "openai"
+    if "gemini" in name or "google" in name:
+        return "google"
     return "ollama"
 
 
