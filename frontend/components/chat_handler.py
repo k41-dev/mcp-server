@@ -150,30 +150,41 @@ def chat_with_agent(message: str, history: list, model_choice: str):
 
 # ====================== STATUS & REFRESH ======================
 def get_status(model_choice_value: str = "Grok"):
+    """Liefert den aktuellen Status für die Top-Status-Bar zurück."""
     try:
-        tools = get_mcp_tools()
-        tool_count = len(tools) if tools else 0
+        # Tools zählen
+        try:
+            tools = get_mcp_tools()
+            tool_count = len(tools) if tools else 0
+        except Exception:
+            tool_count = 0
 
         model_for_prompt = "grok" if model_choice_value == "Grok" else "ollama"
 
-        persona_result = call_mcp_tool("get_active_persona", {})
-        skill_result = call_mcp_tool("get_active_skill", {})
-
+        # Active Persona & Skill holen
         persona_name = "None"
         skill_name = "None"
-        if isinstance(persona_result, str) and "name" in persona_result:
-            try:
-                persona_name = json.loads(persona_result).get("name", "None")
-            except:
-                pass
-        if isinstance(skill_result, str) and "name" in skill_result:
-            try:
-                skill_name = json.loads(skill_result).get("name", "None")
-            except:
-                pass
 
-        prompt_data = mcp_jsonrpc("prompts/get_dynamic", {"model": model_for_prompt})
-        version = prompt_data.get("version", "unknown") if prompt_data else "unknown"
+        try:
+            persona_result = call_mcp_tool("get_active_persona", {})
+            if isinstance(persona_result, str) and "name" in persona_result:
+                persona_name = json.loads(persona_result).get("name", "None")
+        except Exception:
+            persona_name = "Error"
+
+        try:
+            skill_result = call_mcp_tool("get_active_skill", {})
+            if isinstance(skill_result, str) and "name" in skill_result:
+                skill_name = json.loads(skill_result).get("name", "None")
+        except Exception:
+            skill_name = "Error"
+
+        # Aktuelle Prompt-Version holen
+        try:
+            prompt_data = mcp_jsonrpc("prompts/get_dynamic", {"model": model_for_prompt})
+            version = prompt_data.get("version", "unknown") if prompt_data else "unknown"
+        except Exception:
+            version = "error"
 
         return (
             f"✅ Connected • {tool_count} tools",
@@ -181,8 +192,15 @@ def get_status(model_choice_value: str = "Grok"):
             f"🎭 Persona: {persona_name}",
             f"🛠️ Skill: {skill_name}"
         )
+
     except Exception as e:
-        return f"❌ Error: {str(e)}", "📜 Prompt: error", "🎭 Persona: error", "🛠️ Skill: error"
+        # Fallback bei komplettem Fehler
+        return (
+            f"❌ Error: {str(e)}",
+            "📜 Prompt: error",
+            "🎭 Persona: error",
+            "🛠️ Skill: error"
+        )
 
 
 def refresh_all(model_choice_value: str):
