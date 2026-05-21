@@ -230,16 +230,24 @@ def wire_initial_demo_loads(
     tool_dropdown,
 ):
     """Verdrahtet alle demo.load() und model_change Events."""
-    demo.load(get_status, outputs=[conn_status, prompt_version, active_persona, active_skill])
-    demo.load(get_system_prompt, inputs=[model_choice], outputs=[system_prompt_box])
+    demo.load(
+        get_status,
+        inputs=[model_choice],
+        outputs=[conn_status, prompt_version, active_persona, active_skill]
+    )
+    demo.load(
+        get_system_prompt,
+        inputs=[model_choice],
+        outputs=[system_prompt_box]
+    )
     demo.load(load_initial_personas, outputs=[persona_dropdown])
     demo.load(load_initial_skills, outputs=[skill_dropdown])
     demo.load(get_tool_names, outputs=[tool_dropdown])
 
     model_choice.change(
-    get_system_prompt,
-    inputs=[model_choice],
-    outputs=[system_prompt_box]
+        get_system_prompt,
+        inputs=[model_choice],
+        outputs=[system_prompt_box]
     ).then(
         get_status,
         inputs=[model_choice],
