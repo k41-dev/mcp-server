@@ -33,8 +33,6 @@ def _get_model_family(model_name: str) -> str:
         return "anthropic"
     if "gpt" in name or "o1" in name or "openai" in name:
         return "openai"
-    if "gemini" in name or "google" in name:
-        return "google"
     return "ollama"
 
 
@@ -42,46 +40,55 @@ def _compute_prompt_version(
     active_persona: Optional[Dict[str, Any]] = None, 
     active_skill: Optional[Dict[str, Any]] = None,
     tools_count: int = 0,
-    model: str = None                     # NEU
+    model: Optional[str] = None
 ) -> str:
-    model_family = _get_model_family(model) if model else "grok"
+    """
+    Berechnet eine stabile Versions-ID für den aktuellen Prompt-Zustand.
+    Die Version ändert sich, wenn sich Persona, Skill, Tool-Anzahl oder das Modell ändert.
+    """
+    model_family = _get_model_family(model) if model else "unknown"
     persona_part = active_persona.get("name", "none") if active_persona else "none"
     skill_part = active_skill.get("name", "none") if active_skill else "none"
+    
     key = f"{model_family}|{persona_part}|{skill_part}|{tools_count}"
     return hashlib.md5(key.encode()).hexdigest()[:10]
 
 
 def get_base_prompt(model: str = None) -> str:
     """
-    Load the base system prompt from the prompts/ folder.
+    Lädt den passenden System-Prompt basierend auf dem Modell-Family.
     """
     if model is None:
         model = XAI_MODEL
 
     family = _get_model_family(model)
-    
+
     if family == "grok":
-        filename = os.getenv("SYSTEM_PROMPT_GROK")
+        filename = os.getenv("SYSTEM_PROMPT_GROK", "system_prompt_grok.md")
+    elif family == "openai":
+        filename = os.getenv("SYSTEM_PROMPT_OPENAI", "system_prompt_openai.md")
+    elif family == "anthropic":
+        filename = os.getenv("SYSTEM_PROMPT_ANTHROPIC", "system_prompt_anthropic.md")
     else:
-        filename = os.getenv("SYSTEM_PROMPT_OLLAMA")
+        filename = os.getenv("SYSTEM_PROMPT_OLLAMA", "system_prompt_ollama.md")
 
     prompt_path = PROMPTS_DIR / filename
-    
+
     if prompt_path.exists():
         try:
             return prompt_path.read_text(encoding="utf-8").strip()
         except Exception as e:
-            print(f"⚠️ Failed to read {filename} for model family '{family}': {e}")
-    
-    # Fallback prompts
-    if family == "grok":
-        return (
-            "You are Grok, an autonomous agent with secure access to MCP tools."
-        )
+            print(f"⚠️ Konnte {filename} nicht lesen: {e}")
+
+    # Fallbacks, falls Datei fehlt
+    if family == "openai":
+        return "You are a capable AI agent powered by OpenAI with secure access to MCP tools."
+    elif family == "anthropic":
+        return "You are a careful and precise AI agent powered by Anthropic Claude with access to MCP tools."
+    elif family == "grok":
+        return "You are Grok, an autonomous agent with secure access to MCP tools."
     else:
-        return (
-            "You are a capable local AI agent with access to external tools via the MCP protocol."
-        )
+        return "You are a capable local AI agent with access to external tools via the MCP protocol."
 
 
 def format_tools_for_prompt(tools: List[Dict[str, Any]]) -> str:
@@ -203,12 +210,18 @@ def get_prompt_version_only(
     active_persona: Optional[Dict[str, Any]] = None,
     active_skill: Optional[Dict[str, Any]] = None,
     tools_count: int = 0,
-    model: Optional[str] = None          # ← neu: Optional + Default
+    model: Optional[str] = None
 ) -> str:
-    """Returns version string. Special case for initial load."""
-    if active_persona is None and active_skill is None and tools_count == 0:
+    """
+    Gibt nur die Versions-ID zurück.
+    Wird von verschiedenen Tools (get_server_info, get_prompt_status, etc.) verwendet.
+    """
+    if active_persona is None and active_skill is None and tools_count == 0 and model is None:
         return "initial"
 
     return _compute_prompt_version(
-        active_persona, active_skill, tools_count, model
+        active_persona=active_persona,
+        active_skill=active_skill,
+        tools_count=tools_count,
+        model=model
     )

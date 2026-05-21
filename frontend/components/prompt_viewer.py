@@ -11,8 +11,15 @@ def get_system_prompt(model_choice: str) -> str:
     """Fetch the current dynamic system prompt + version."""
     print(f"[DEBUG] get_system_prompt called with model: {model_choice}")
     
-    model = "grok" if model_choice == "Grok" else "ollama"
-    
+    # === Erweitertes Mapping ===
+    model_map = {
+        "Grok": "grok",
+        "OpenAI": "openai",
+        "Anthropic": "anthropic",
+        "Ollama": "ollama"
+    }
+    model = model_map.get(model_choice, "grok")
+
     data = mcp_jsonrpc("prompts/get_dynamic", {"model": model})
     print(f"[DEBUG] Received from MCP: {data}")
     
