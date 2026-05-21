@@ -122,11 +122,12 @@ def build_dynamic_system_prompt(
     tools: Optional[List[Dict[str, Any]]] = None,
     active_persona: Optional[Dict[str, Any]] = None,
     active_skill: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:                  
-    """
-    Returns: {"prompt": str, "version": str}
-    """
-    base_prompt = get_base_prompt(model)
+) -> Dict[str, Any]:
+
+    # Saubere Model-Normalisierung (einheitlich für alle Aufrufe)
+    effective_model = model or XAI_MODEL or "grok"
+
+    base_prompt = get_base_prompt(effective_model)
 
     if not tools:
         return {
@@ -158,7 +159,10 @@ def build_dynamic_system_prompt(
         full_prompt += "\n\n" + injection
 
     version = _compute_prompt_version(
-        active_persona, active_skill, len(tools) if tools else 0, model
+        active_persona=active_persona,
+        active_skill=active_skill,
+        tools_count=len(tools) if tools else 0,
+        model=effective_model
     )
 
     # === Prompt-Cache Check ===
