@@ -46,7 +46,7 @@ def _compute_prompt_version(
     Berechnet eine stabile Versions-ID für den aktuellen Prompt-Zustand.
     Die Version ändert sich, wenn sich Persona, Skill, Tool-Anzahl oder das Modell ändert.
     """
-    model_family = _get_model_family(model) if model else "unknown"
+    model_family = _get_model_family(model)
     persona_part = active_persona.get("name", "none") if active_persona else "none"
     skill_part = active_skill.get("name", "none") if active_skill else "none"
     
@@ -123,8 +123,10 @@ def build_dynamic_system_prompt(
     active_persona: Optional[Dict[str, Any]] = None,
     active_skill: Optional[Dict[str, Any]] = None
 ) -> Dict[str, Any]:
-
-    # Saubere Model-Normalisierung (einheitlich für alle Aufrufe)
+    """
+    Returns: {"prompt": str, "version": str}
+    """
+    # Saubere Model-Normalisierung – Single Source of Truth
     effective_model = model or XAI_MODEL or "grok"
 
     base_prompt = get_base_prompt(effective_model)
@@ -150,6 +152,7 @@ def build_dynamic_system_prompt(
 - Do not fabricate tool results. If a tool fails or returns an error, report it accurately.
 """
     
+    # === Prompt nur EINMAL bauen ===
     full_prompt = base_prompt + tool_section + critical_rules
 
     # === Zentrale Injection über AgentContext ===
@@ -158,14 +161,15 @@ def build_dynamic_system_prompt(
     if injection:
         full_prompt += "\n\n" + injection
 
+    # === Version mit effective_model (wichtig für stabile Hashes!) ===
     version = _compute_prompt_version(
         active_persona=active_persona,
         active_skill=active_skill,
-        tools_count=len(tools) if tools else 0,
+        tools_count=len(tools),
         model=effective_model
     )
 
-    # === Prompt-Cache Check ===
+    # === Cache Check ===
     cached = get_cached_prompt(version)
     if cached:
         logger.debug(f"📦 Prompt aus Cache geladen (Version: {version})")
@@ -174,21 +178,14 @@ def build_dynamic_system_prompt(
             "version": version
         }
 
-    # === Prompt neu bauen + cachen ===
-    full_prompt = base_prompt + tool_section + critical_rules
-
-    ctx = AgentContext()
-    injection = ctx.get_prompt_injection()
-    if injection:
-        full_prompt += "\n\n" + injection
-
+    # === Nur bei Cache-Miss cachen ===
     set_cached_prompt(version, full_prompt)
 
-    # === Logging mit direkter Inline-Berechnung ===
+    # === Logging ===
     p_name = active_persona.get("name") if active_persona else "None"
     s_name = active_skill.get("name") if active_skill else "None"
 
-    logger.info(f"📜 Prompt gebaut | Version: {version} | Persona: {p_name} | Skill: {s_name} | Tools: {len(tools) if tools else 0}")
+    logger.info(f"📜 Prompt gebaut | Version: {version} | Persona: {p_name} | Skill: {s_name} | Tools: {len(tools)}")
 
     return {
         "prompt": full_prompt,
