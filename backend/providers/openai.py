@@ -13,7 +13,7 @@ class OpenAIProvider(ModelProvider):
 
     # === NEU: Vererbte Attribute aus base.py ===
     streaming_type = "openai"
-    default_model = "gpt-4o"
+    default_model = settings.OPENAI_MODEL
 
     def __init__(self):
         self.client = None

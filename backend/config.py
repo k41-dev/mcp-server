@@ -27,9 +27,10 @@ class Settings:
 
     # === Other ===
     ANTHROPIC_API_KEY: str = os.getenv("ANTHROPIC_API_KEY", "")
-    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")      # für GPT-4o, o1 etc.
-    GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
-
+    ANTHROPIC_MODEL: str = os.getenv("ANTHROPIC_MODEL", "")
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "")    
+    
     # === Default ===
     DEFAULT_MODEL_PROVIDER: str = os.getenv("DEFAULT_MODEL_PROVIDER", "grok")
 

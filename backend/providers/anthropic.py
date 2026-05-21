@@ -14,7 +14,7 @@ class AnthropicProvider(ModelProvider):
 
     # === Attribute aus base.py ===
     streaming_type = "anthropic"
-    default_model = "claude-3-5-sonnet-20241022"
+    default_model = settings.ANTHROPIC_MODEL
 
     def __init__(self):
         self.client = None
