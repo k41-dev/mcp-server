@@ -292,6 +292,7 @@ async def mcp_stream_handler(request: Request):
     max_tokens = params.get("max_tokens")
 
     try:
+        # Provider liefert den passenden Stream zurück
         stream = await provider.chat(
             messages=messages,
             tools=tools,
@@ -301,34 +302,27 @@ async def mcp_stream_handler(request: Request):
         )
 
         async def stream_generator():
-            try:
-                if provider_name in ("grok", "openai"):
-                    # OpenAI-kompatibles Streaming (Grok + OpenAI)
-                    for chunk in stream:
-                        if chunk.choices and chunk.choices[0].delta.content:
-                            yield chunk.choices[0].delta.content
+            if provider.streaming_type == "openai":
+                # OpenAI-kompatibles Streaming (Grok + OpenAI)
+                for chunk in stream:
+                    if chunk.choices and chunk.choices[0].delta.content:
+                        yield chunk.choices[0].delta.content
 
-                elif provider_name == "ollama":
-                    # Ollama-style streaming
-                    for chunk in stream:
-                        content = chunk.get("message", {}).get("content", "")
-                        if content:
-                            yield content
+            elif provider.streaming_type == "ollama":
+                # Ollama natives Streaming
+                for chunk in stream:
+                    content = chunk.get("message", {}).get("content", "")
+                    if content:
+                        yield content
 
-                # Signal end of stream
-                yield "data: [DONE]\n\n"
-
-            except Exception as e:
-                yield f"data: [ERROR] {str(e)}\n\n"
+            else:
+                # Fallback für zukünftige Provider (z.B. anthropic, google)
+                yield f"[Streaming für '{provider.streaming_type}' noch nicht implementiert]"
 
         return StreamingResponse(
             stream_generator(),
-            media_type="text/event-stream",
-            headers={
-                "Cache-Control": "no-cache",
-                "Connection": "keep-alive",
-                "X-Accel-Buffering": "no"
-            }
+            media_type="text/plain",
+            headers={"Cache-Control": "no-cache"}
         )
 
     except Exception as e:
