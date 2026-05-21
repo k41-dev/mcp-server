@@ -302,20 +302,18 @@ async def mcp_stream_handler(request: Request):
 
         async def stream_generator():
             try:
-                if provider_name == "grok":
-                    # OpenAI / Grok streaming
+                if provider_name in ("grok", "openai"):
+                    # OpenAI-kompatibles Streaming (Grok + OpenAI)
                     for chunk in stream:
-                        if chunk.choices:
-                            delta = chunk.choices[0].delta
-                            if delta and delta.content:
-                                yield f"data: {delta.content}\n\n"
+                        if chunk.choices and chunk.choices[0].delta.content:
+                            yield chunk.choices[0].delta.content
 
                 elif provider_name == "ollama":
-                    # Ollama streaming
+                    # Ollama-style streaming
                     for chunk in stream:
                         content = chunk.get("message", {}).get("content", "")
                         if content:
-                            yield f"data: {content}\n\n"
+                            yield content
 
                 # Signal end of stream
                 yield "data: [DONE]\n\n"

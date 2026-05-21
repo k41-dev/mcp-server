@@ -7,5 +7,6 @@ from .base import ModelProvider, register_provider, get_provider, ToolCall
 # Importiert die Provider → sie registrieren sich automatisch
 from .grok import grok_provider
 from .ollama import ollama_provider
+from .openai import openai_provider
 
 __all__ = ["ModelProvider", "register_provider", "get_provider", "ToolCall"]
