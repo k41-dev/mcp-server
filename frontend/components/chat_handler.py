@@ -3,22 +3,15 @@
 chat_handler.py - Zentrale Chat-Logik für das Frontend (als Komponente)
 """
 
-import json
-from openai import OpenAI
-import ollama
-from dotenv import load_dotenv
 import os
-
+import json
 from .mcp_client import mcp_jsonrpc, call_mcp_tool, get_mcp_tools
 
-load_dotenv()
 
 XAI_API_KEY = os.getenv("XAI_API_KEY")
 XAI_MODEL = os.getenv("XAI_MODEL")
 OLLAMA_URL = os.getenv("OLLAMA_URL")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL")
-
-openai_client = OpenAI(api_key=XAI_API_KEY, base_url="https://api.x.ai/v1") if XAI_API_KEY else None
 
 
 # ====================== HISTORY ======================
