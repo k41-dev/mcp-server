@@ -1,5 +1,5 @@
 """
-grok.py - xAI Grok Provider (OpenAI-kompatibel) – korrigiert
+grok.py - xAI Grok Provider (OpenAI-kompatibel)
 """
 
 from typing import List, Dict, Any, Optional
@@ -10,6 +10,10 @@ from .base import ModelProvider, register_provider
 class GrokProvider(ModelProvider):
     name = "grok"
     supports_tool_calling = True
+
+    # === NEU: Vererbte Attribute aus base.py ===
+    streaming_type = "openai"
+    default_model = settings.XAI_MODEL
 
     def __init__(self):
         self.client = None
@@ -34,11 +38,13 @@ class GrokProvider(ModelProvider):
 
         import asyncio
 
+        # Optional: default_model nutzen, falls vorhanden
+        model = self.default_model or settings.XAI_MODEL
+
         if stream:
-            # Streaming-Pfad
             stream_response = await asyncio.to_thread(
                 self.client.chat.completions.create,
-                model=settings.XAI_MODEL,
+                model=model,
                 messages=messages,
                 tools=tools,
                 tool_choice="auto" if tools else None,
@@ -46,13 +52,11 @@ class GrokProvider(ModelProvider):
                 max_tokens=max_tokens,
                 stream=True
             )
-            return stream_response   # Gibt den OpenAI-Stream-Iterator zurück
-
+            return stream_response
         else:
-            # Non-Streaming-Pfad (wie bisher)
             response = await asyncio.to_thread(
                 self.client.chat.completions.create,
-                model=settings.XAI_MODEL,
+                model=model,
                 messages=messages,
                 tools=tools,
                 tool_choice="auto" if tools else None,

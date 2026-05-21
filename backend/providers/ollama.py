@@ -7,16 +7,20 @@ import json
 import asyncio
 from typing import List, Dict, Any, Optional
 from backend.config import settings
-from .base import ModelProvider, ToolCall, register_provider
+from .base import ModelProvider, register_provider
 
 
 class OllamaProvider(ModelProvider):
     name = "ollama"
     supports_tool_calling = True
 
+    # === NEU: Vererbte Attribute aus base.py ===
+    streaming_type = "ollama"
+    default_model = settings.OLLAMA_MODEL
+
     def __init__(self):
         self.client = ollama.Client(host=settings.OLLAMA_URL)
-        self.model = settings.OLLAMA_MODEL
+        self.model = self.default_model or settings.OLLAMA_MODEL
 
     async def chat(
         self,
@@ -26,8 +30,6 @@ class OllamaProvider(ModelProvider):
         max_tokens: Optional[int] = None,
         stream: bool = False,
     ) -> Dict[str, Any] | Any:
-        import asyncio
-        import json
 
         if stream:
             # Streaming-Pfad
@@ -38,7 +40,7 @@ class OllamaProvider(ModelProvider):
                 tools=tools,
                 stream=True
             )
-            return stream_response   # Gibt den Ollama-Stream-Iterator zurück
+            return stream_response
 
         else:
             # Non-Streaming-Pfad

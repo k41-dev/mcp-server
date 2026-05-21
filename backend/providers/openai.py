@@ -11,6 +11,10 @@ class OpenAIProvider(ModelProvider):
     name = "openai"
     supports_tool_calling = True
 
+    # === NEU: Vererbte Attribute aus base.py ===
+    streaming_type = "openai"
+    default_model = "gpt-4o"
+
     def __init__(self):
         self.client = None
 
@@ -33,12 +37,13 @@ class OpenAIProvider(ModelProvider):
 
         import asyncio
 
-        model_name = "gpt-4o"  # TODO: später aus Config oder Request holen
+        # Nutze das deklarierte Default-Modell
+        model = self.default_model
 
         if stream:
             stream_response = await asyncio.to_thread(
                 self.client.chat.completions.create,
-                model=model_name,
+                model=model,
                 messages=messages,
                 tools=tools,
                 tool_choice="auto" if tools else None,
@@ -50,7 +55,7 @@ class OpenAIProvider(ModelProvider):
         else:
             response = await asyncio.to_thread(
                 self.client.chat.completions.create,
-                model=model_name,
+                model=model,
                 messages=messages,
                 tools=tools,
                 tool_choice="auto" if tools else None,
