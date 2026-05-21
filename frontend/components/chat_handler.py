@@ -48,6 +48,7 @@ def chat_with_agent(message: str, history: list, model_choice: str):
     provider_name = "grok" if is_grok else "ollama"
     model_display = XAI_MODEL if is_grok else OLLAMA_MODEL
 
+    # System Prompt + Versionierung (bleibt über MCP)
     prompt_data = mcp_jsonrpc("prompts/get_dynamic", {"model": "grok" if is_grok else "ollama"})
     system_prompt = prompt_data.get("prompt", "") if prompt_data else ""
     current_version = prompt_data.get("version", "v1") if prompt_data else "v1"
@@ -62,7 +63,7 @@ def chat_with_agent(message: str, history: list, model_choice: str):
     else:
         messages = clean_history + [{"role": "user", "content": message}]
 
-    # === Active Persona + Skill Context Line (bleibt unverändert) ===
+    # === Active Persona + Skill (Context Line) ===
     active_persona_name = "None"
     active_skill_name = "None"
     try:
@@ -155,10 +156,12 @@ def chat_with_agent(message: str, history: list, model_choice: str):
 
 
 # ====================== STATUS & REFRESH ======================
-def get_status():
+def get_status(model_choice_value: str = "Grok"):
     try:
         tools = get_mcp_tools()
         tool_count = len(tools) if tools else 0
+
+        model_for_prompt = "grok" if model_choice_value == "Grok" else "ollama"
 
         persona_result = call_mcp_tool("get_active_persona", {})
         skill_result = call_mcp_tool("get_active_skill", {})
@@ -166,13 +169,17 @@ def get_status():
         persona_name = "None"
         skill_name = "None"
         if isinstance(persona_result, str) and "name" in persona_result:
-            try: persona_name = json.loads(persona_result).get("name", "None")
-            except: pass
+            try:
+                persona_name = json.loads(persona_result).get("name", "None")
+            except:
+                pass
         if isinstance(skill_result, str) and "name" in skill_result:
-            try: skill_name = json.loads(skill_result).get("name", "None")
-            except: pass
+            try:
+                skill_name = json.loads(skill_result).get("name", "None")
+            except:
+                pass
 
-        prompt_data = mcp_jsonrpc("prompts/get_dynamic", {"model": "grok"})
+        prompt_data = mcp_jsonrpc("prompts/get_dynamic", {"model": model_for_prompt})
         version = prompt_data.get("version", "unknown") if prompt_data else "unknown"
 
         return (

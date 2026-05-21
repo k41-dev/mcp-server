@@ -62,6 +62,7 @@ def wire_persona_controls(
         outputs=[system_prompt_box]
     ).then(
         get_status,
+        inputs=[model_choice],
         outputs=[conn_status, prompt_version, active_persona, active_skill]
     )
 
@@ -73,6 +74,7 @@ def wire_persona_controls(
         outputs=[system_prompt_box]
     ).then(
         get_status,
+        inputs=[model_choice],
         outputs=[conn_status, prompt_version, active_persona, active_skill]
     ).then(
         lambda: "Default",
@@ -107,6 +109,7 @@ def wire_skill_controls(
         outputs=[system_prompt_box]
     ).then(
         get_status,
+        inputs=[model_choice],
         outputs=[conn_status, prompt_version, active_persona, active_skill]
     )
 
@@ -118,6 +121,7 @@ def wire_skill_controls(
         outputs=[system_prompt_box]
     ).then(
         get_status,
+        inputs=[model_choice],
         outputs=[conn_status, prompt_version, active_persona, active_skill]
     ).then(
         lambda: "None",
@@ -232,4 +236,12 @@ def wire_initial_demo_loads(
     demo.load(load_initial_skills, outputs=[skill_dropdown])
     demo.load(get_tool_names, outputs=[tool_dropdown])
 
-    model_choice.change(get_system_prompt, inputs=[model_choice], outputs=[system_prompt_box])
+    model_choice.change(
+    get_system_prompt,
+    inputs=[model_choice],
+    outputs=[system_prompt_box]
+    ).then(
+        get_status,
+        inputs=[model_choice],
+        outputs=[conn_status, prompt_version, active_persona, active_skill]
+    )
