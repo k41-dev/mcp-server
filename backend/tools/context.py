@@ -56,10 +56,20 @@ class AgentContext:
 
     
     @property
+    def provider(self) -> Optional[str]:
+        """Gibt den aktuell aktiven Provider zurück ('grok' | 'ollama' | 'openai' | 'anthropic')."""
+        from backend.tools.state import get_active_provider
+        return get_active_provider()
+
+
+    @property
     def active_model(self) -> Optional[str]:
-        """Gibt das aktuell aktive Modell zurück oder None."""
-        from backend.tools.state import get_active_model as _get_active_model
-        return _get_active_model()
+        """
+        Gibt den **konkreten Modellnamen** aus den Settings zurück,
+        basierend auf dem aktiven Provider.
+        """
+        from backend.tools.state import get_active_model
+        return get_active_model()
 
 
     # ====================== CONVENIENCE ======================
@@ -96,9 +106,10 @@ class AgentContext:
     def get_active_names(self) -> Dict[str, Optional[str]]:
         """Gibt die Namen der aktiven Komponenten zurück."""
         return {
+            "provider": self.provider,
+            "model": self.active_model,
             "persona": self.active_persona.get("name") if self.active_persona else None,
             "skill": self.active_skill.get("name") if self.active_skill else None,
-            "model": self.active_model,
         }
 
 
@@ -108,6 +119,8 @@ class AgentContext:
         parts = []
         if names["model"]:
             parts.append(names["model"])
+        if names["provider"]:
+            parts.append(f"({names['provider']})")
         if names["skill"]:
             parts.append(names["skill"])
         if names["persona"]:
@@ -123,6 +136,8 @@ class AgentContext:
         """
         return {
             "session_id": self.session_id,
+            "provider": self.provider,
+            "active_model": self.active_model,
             "active_persona": self.active_persona,
             "active_skill": self.active_skill,
             "has_active_persona": self.has_active_persona,

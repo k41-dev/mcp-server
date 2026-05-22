@@ -363,59 +363,75 @@ def list_tools_by_category(args: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def set_active_model(args: Dict[str, Any]) -> Dict[str, Any]:
-    """Setzt das aktive Modell für den aktuellen Kontext.
-    
-    Erlaubte Werte: 'grok', 'ollama', 'openai', 'anthropic'
-    """
-    from backend.tools.state import set_active_model as _set_active_model
+def set_active_provider(args: Dict[str, Any]) -> Dict[str, Any]:
+    """Setzt den aktiven Provider (grok, ollama, openai oder anthropic)."""
+    from backend.tools.state import set_active_provider as _set_active_provider
 
-    model_name = args.get("model", "").strip().lower()
-    if not model_name:
+    provider_name = args.get("provider", "").strip().lower()
+    if not provider_name:
         return {
-            "content": [{"type": "text", "text": "Error: 'model' parameter is required"}],
+            "content": [{"type": "text", "text": "Error: 'provider' parameter is required"}],
             "isError": True
         }
 
-    if model_name not in ("grok", "ollama", "openai", "anthropic"):
+    if provider_name not in ("grok", "ollama", "openai", "anthropic"):
         return {
-            "content": [{"type": "text", "text": f"Error: Invalid model '{model_name}'. Allowed: grok, ollama, openai, anthropic"}],
+            "content": [{"type": "text", "text": f"Error: Invalid provider '{provider_name}'. Allowed: grok, ollama, openai, anthropic"}],
             "isError": True
         }
 
-    _set_active_model(model_name)
+    _set_active_provider(provider_name)
     return {
-        "content": [{"type": "text", "text": f"✅ Active model set to: {model_name}"}]
+        "content": [{"type": "text", "text": f"✅ Active provider set to: {provider_name}"}]
     }
 
 
-def clear_active_model(args: Dict[str, Any]) -> Dict[str, Any]:
-    """Entfernt das aktuell aktive Modell aus dem Kontext.
-    
-    Danach fällt das System wieder auf den Default (Grok) zurück.
-    """
-    from backend.tools.state import clear_active_model as _clear_active_model
+def get_active_provider(args: Dict[str, Any]) -> Dict[str, Any]:
+    """Gibt den aktuell aktiven Provider zurück."""
+    from backend.tools.state import get_active_provider as _get_active_provider
+    import json
 
-    _clear_active_model()
+    try:
+        provider = _get_active_provider()
+        if provider:
+            return {
+                "content": [{"type": "text", "text": json.dumps({"active_provider": provider})}]
+            }
+        else:
+            return {
+                "content": [{"type": "text", "text": "No active provider set (using default Grok)."}]
+            }
+    except Exception as e:
+        return {
+            "content": [{"type": "text", "text": f"Error getting active provider: {str(e)}"}],
+            "isError": True
+        }
+
+
+def clear_active_provider(args: Dict[str, Any]) -> Dict[str, Any]:
+    """Entfernt den aktuell aktiven Provider aus dem Kontext."""
+    from backend.tools.state import clear_active_provider as _clear_active_provider
+
+    _clear_active_provider()
     return {
-        "content": [{"type": "text", "text": "✅ Active model cleared. System will fall back to default (Grok)."}]
+        "content": [{"type": "text", "text": "✅ Active provider cleared. System will fall back to default (Grok)."}]
     }
 
 
 def get_active_model(args: Dict[str, Any]) -> Dict[str, Any]:
-    """Gibt das aktuell aktive Modell zurück."""
-    from backend.tools.context import AgentContext
+    """Gibt das aktuell aktive Modell (konkreter Name aus Settings) zurück."""
+    from backend.tools.state import get_active_model as _get_active_model
     import json
 
     try:
-        model = AgentContext().active_model
+        model = _get_active_model()
         if model:
             return {
                 "content": [{"type": "text", "text": json.dumps({"active_model": model})}]
             }
         else:
             return {
-                "content": [{"type": "text", "text": "No active model set (using default Grok)."}]
+                "content": [{"type": "text", "text": "No active model resolved."}]
             }
     except Exception as e:
         return {

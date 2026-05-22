@@ -1,0 +1,9 @@
+{
+  "name": "clear_active_provider",
+  "description": "Entfernt den aktuell aktiven Provider. Das System fällt danach auf den Default (Grok) zurück.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {}
+  },
+  "category": "core"
+}

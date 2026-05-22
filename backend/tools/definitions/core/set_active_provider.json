@@ -1,0 +1,16 @@
+{
+  "name": "set_active_provider",
+  "description": "Setzt den aktiven Provider (grok, ollama, openai oder anthropic). Danach liefert get_active_model() den konkreten Modellnamen aus den Settings.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "provider": {
+        "type": "string",
+        "description": "Der zu setzende Provider. Erlaubte Werte: grok, ollama, openai, anthropic",
+        "enum": ["grok", "ollama", "openai", "anthropic"]
+      }
+    },
+    "required": ["provider"]
+  },
+  "category": "core"
+}

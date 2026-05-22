@@ -1,0 +1,9 @@
+{
+  "name": "get_active_provider",
+  "description": "Gibt den aktuell aktiven Provider zurück (grok, ollama, openai oder anthropic).",
+  "inputSchema": {
+    "type": "object",
+    "properties": {}
+  },
+  "category": "core"
+}

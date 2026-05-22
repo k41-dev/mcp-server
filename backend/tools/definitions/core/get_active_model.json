@@ -1,6 +1,6 @@
 {
   "name": "get_active_model",
-  "description": "Gibt das aktuell aktive Modell im Kontext zurück.",
+  "description": "Gibt den aktuell aktiven Modellnamen zurück (z.B. 'llama3.1:latest' oder 'grok-4.3'), basierend auf dem aktiven Provider und den Settings.",
   "inputSchema": {
     "type": "object",
     "properties": {}
