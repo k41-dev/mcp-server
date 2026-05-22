@@ -224,8 +224,8 @@ async def mcp_handler(
                 active_model = None
 
             if model:
-                from backend.tools.state import set_active_model
-                set_active_model(model)
+                from backend.tools.state import set_active_provider
+                set_active_provider(model)
 
             effective_model = model or active_model
 
