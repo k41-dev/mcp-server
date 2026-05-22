@@ -196,15 +196,27 @@ def wire_chat_events(
     prompt_version,
     active_persona,
     active_skill,
+    system_prompt_box,          # ← neu
 ):
-    """Verdrahtet Chat-Events (Send-Button + Enter)."""
+    """Verdrahtet Chat-Events (Send-Button + Enter).
+
+    Verwendet refresh_ui_state, damit Status-Bar und System Prompt Viewer
+    nach dem Senden einer Nachricht synchron bleiben (auch bei Ollama).
+    """
     send_btn.click(
         respond,
         [msg, chatbot, model_choice],
         [chatbot, msg]
     ).then(
-        get_status,
-        outputs=[conn_status, prompt_version, active_persona, active_skill]
+        refresh_ui_state,
+        inputs=[model_choice],
+        outputs=[
+            conn_status,
+            prompt_version,
+            active_persona,
+            active_skill,
+            system_prompt_box
+        ]
     )
 
     msg.submit(
@@ -212,8 +224,15 @@ def wire_chat_events(
         [msg, chatbot, model_choice],
         [chatbot, msg]
     ).then(
-        get_status,
-        outputs=[conn_status, prompt_version, active_persona, active_skill]
+        refresh_ui_state,
+        inputs=[model_choice],
+        outputs=[
+            conn_status,
+            prompt_version,
+            active_persona,
+            active_skill,
+            system_prompt_box
+        ]
     )
 
 

@@ -451,7 +451,7 @@ def get_status(model_choice_value: str = "Grok"):
 
 
 def refresh_all(model_choice_value: str):
-    return get_status()
+    return get_status(model_choice_value)
 
 
 def refresh_ui_state(model_choice_value: str = "Grok"):

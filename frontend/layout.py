@@ -132,6 +132,7 @@ def create_ui():
             prompt_version=prompt_version,
             active_persona=active_persona,
             active_skill=active_skill,
+            system_prompt_box=system_prompt_box,
         )
 
         # ====================== INITIAL LOAD & MODEL CHANGE ======================
