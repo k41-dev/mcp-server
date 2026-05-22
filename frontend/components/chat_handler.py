@@ -7,6 +7,7 @@ import os
 import json
 import httpx
 from .mcp_client import mcp_jsonrpc, call_mcp_tool, get_mcp_tools
+from .prompt_viewer import get_system_prompt
 
 
 XAI_API_KEY = os.getenv("XAI_API_KEY")
@@ -452,6 +453,20 @@ def get_status(model_choice_value: str = "Grok"):
 def refresh_all(model_choice_value: str):
     return get_status()
 
+
+def refresh_ui_state(model_choice_value: str = "Grok"):
+    """
+    Zentrale Single-Source-of-Truth Funktion zum Aktualisieren
+    von Status-Bar UND System Prompt Viewer nach Model-Wechsel
+    oder Initial Load.
+
+    Reduziert Redundanz in den Event-Wirings und verhindert
+    Desync zwischen Prompt-Version (Status-Bar) und Prompt-Inhalt (Viewer).
+    """
+    status = get_status(model_choice_value)
+    prompt_text = get_system_prompt(model_choice_value)
+    return (*status, prompt_text)
+    
 
 def respond(user_message, chat_history, model):
     """

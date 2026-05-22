@@ -7,11 +7,11 @@ import gradio as gr
 from .mcp_client import mcp_jsonrpc
 
 
-def get_system_prompt(model_choice: str) -> str:
-    """Fetch the current dynamic system prompt + version."""
-    print(f"[DEBUG] get_system_prompt called with model: {model_choice}")
+def get_system_prompt(model_choice: str) -> gr.update:
+    """Fetch the current dynamic system prompt + version.
+    Gibt immer gr.update() zurück → zuverlässiges Update auch bei gr.Code + Accordion."""
+    print(f"[DEBUG] get_system_prompt called with model_choice: '{model_choice}'")
     
-    # === Erweitertes Mapping ===
     model_map = {
         "Grok": "grok",
         "OpenAI": "openai",
@@ -19,17 +19,22 @@ def get_system_prompt(model_choice: str) -> str:
         "Ollama": "ollama"
     }
     model = model_map.get(model_choice, "grok")
+    print(f"[DEBUG] → mapped to backend model: '{model}'")
 
     data = mcp_jsonrpc("prompts/get_dynamic", {"model": model})
-    print(f"[DEBUG] Received from MCP: {data}")
-    
+    print(f"[DEBUG] MCP Response → keys: {list(data.keys()) if isinstance(data, dict) else 'N/A'}")
+
     if data and isinstance(data, dict) and "prompt" in data:
         prompt_text = data["prompt"]
         version = data.get("version", "unknown")
         header = f"**Prompt Version:** `{version}`\n\n"
-        return header + prompt_text
-    
-    return f"❌ Could not retrieve system prompt. Response was: {data}"
+        full_text = header + prompt_text
+        print(f"[DEBUG] ✅ New prompt for {model} | Version: {version} | Length: {len(full_text)}")
+        return gr.update(value=full_text)          # <--- entscheidend
+
+    error_text = f"❌ Could not retrieve system prompt for {model_choice}. Response: {data}"
+    print(f"[DEBUG] ❌ {error_text}")
+    return gr.update(value=error_text)
 
 
 def create_prompt_viewer() -> gr.Code:
