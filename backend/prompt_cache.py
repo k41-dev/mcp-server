@@ -42,5 +42,6 @@ def _on_context_changed(data: dict) -> None:
 subscribe(EventTypes.PERSONA_ACTIVATED, _on_context_changed)
 subscribe(EventTypes.SKILL_ACTIVATED, _on_context_changed)
 subscribe(EventTypes.CONTEXT_CLEARED, _on_context_changed)
+subscribe(EventTypes.MODEL_CHANGED, _on_context_changed)
 
 logger.info("✅ Prompt-Cache mit Event-Invalidierung initialisiert")
