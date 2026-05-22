@@ -216,14 +216,18 @@ async def mcp_handler(
             try:
                 active_persona = ctx.active_persona if ctx else None
                 active_skill = ctx.active_skill if ctx else None
+                active_model = ctx.active_model if ctx else None
             except Exception as e:
                 logger.error(f"Error getting context via dependency: {e}")
                 active_persona = None
                 active_skill = None
+                active_model = None
+
+            effective_model = model or active_model
 
             try:
                 result = build_dynamic_system_prompt(
-                    model=model,
+                    model=effective_model,
                     tools=tools_for_prompt,
                     active_persona=active_persona,
                     active_skill=active_skill

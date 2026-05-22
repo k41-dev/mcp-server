@@ -31,25 +31,36 @@ class AgentContext:
     def __init__(self, session_id: int = DEFAULT_SESSION_ID):
         self.session_id = session_id
 
-    # ====================== PROPERTIES ======================
 
+    # ====================== PROPERTIES ======================
     @property
     def active_persona(self) -> Optional[Dict[str, Any]]:
         """Gibt die aktuell aktive Persona zurück oder None."""
         return _get_active_persona()
+
 
     @property
     def active_skill(self) -> Optional[Dict[str, Any]]:
         """Gibt den aktuell aktiven Skill zurück oder None."""
         return _get_active_skill()
 
+
     @property
     def has_active_skill(self) -> bool:
         return self.active_skill is not None
 
+
     @property
     def has_active_persona(self) -> bool:
         return self.active_persona is not None
+
+    
+    @property
+    def active_model(self) -> Optional[str]:
+        """Gibt das aktuell aktive Modell zurück oder None."""
+        from backend.tools.state import get_active_model as _get_active_model
+        return _get_active_model()
+
 
     # ====================== CONVENIENCE ======================
     def get_prompt_injection(self) -> str:
@@ -83,10 +94,11 @@ class AgentContext:
 
 
     def get_active_names(self) -> Dict[str, Optional[str]]:
-        """Gibt nur die Namen zurück (für Logging / Status)."""
+        """Gibt die Namen der aktiven Komponenten zurück."""
         return {
             "persona": self.active_persona.get("name") if self.active_persona else None,
             "skill": self.active_skill.get("name") if self.active_skill else None,
+            "model": self.active_model,
         }
 
 

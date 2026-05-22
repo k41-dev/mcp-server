@@ -57,6 +57,7 @@ class EventTypes:
     SKILL_ACTIVATED = "skill_activated"
     CONTEXT_CLEARED = "context_cleared"
     MEMORY_CLEARED = "memory_cleared"
+    MODEL_CHANGED = "model_changed"
 
 
 # ====================== DEFAULT LOGGING SUBSCRIBER ======================

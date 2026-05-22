@@ -11,6 +11,7 @@ from backend.events import publish, EventTypes
 # Nur hier darf der State leben
 _active_persona: Dict[int, Dict[str, Any]] = {}
 _active_skill: Dict[int, Dict[str, Any]] = {}
+_active_model: Dict[int, str] = {}
 
 
 def set_active_persona(persona_name: str, instructions: str, intensity: int = 7) -> None:
@@ -61,3 +62,26 @@ def clear_active_skill() -> None:
 
     # === Event feuern ===
     publish(EventTypes.CONTEXT_CLEARED, {"cleared": "skill"})
+
+
+# ====================== ACTIVE MODEL ======================
+def set_active_model(model_name: str) -> None:
+    """Setzt das aktuell aktive Modell (z. B. 'grok', 'ollama', 'openai', 'anthropic')."""
+    model_name = model_name.lower().strip()
+    if model_name not in ("grok", "ollama", "openai", "anthropic"):
+        model_name = "grok"  # sicherer Default
+
+    _active_model[DEFAULT_SESSION_ID] = model_name
+
+    publish(EventTypes.MODEL_CHANGED, {
+        "model": model_name
+    })
+
+
+def get_active_model() -> Optional[str]:
+    return _active_model.get(DEFAULT_SESSION_ID)
+
+
+def clear_active_model() -> None:
+    _active_model.pop(DEFAULT_SESSION_ID, None)
+    publish(EventTypes.CONTEXT_CLEARED, {"cleared": "model"})
