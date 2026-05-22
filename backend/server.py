@@ -223,6 +223,10 @@ async def mcp_handler(
                 active_skill = None
                 active_model = None
 
+            if model:
+                from backend.tools.state import set_active_model
+                set_active_model(model)
+
             effective_model = model or active_model
 
             try:
