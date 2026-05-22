@@ -46,7 +46,7 @@ def _compute_prompt_version(
     Berechnet eine stabile Versions-ID für den aktuellen Prompt-Zustand.
     Die Version ändert sich, wenn sich Persona, Skill, Tool-Anzahl oder das Modell ändert.
     """
-    model_family = _get_model_family(model)
+    model_family = _get_model_family(model) if model else "grok"
     persona_part = active_persona.get("name", "none") if active_persona else "none"
     skill_part = active_skill.get("name", "none") if active_skill else "none"
     
