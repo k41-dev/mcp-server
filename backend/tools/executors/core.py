@@ -148,7 +148,9 @@ def get_server_info(args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def get_prompt_status(args: Dict[str, Any]) -> Dict[str, Any]:
-    """Returns current prompt version + active persona/skill.
+    """Returns current prompt version + active persona/skill/model.
+    
+    Berücksichtigt jetzt auch das aktive Modell aus dem Kontext.
     """
     import json
     import datetime
@@ -159,7 +161,7 @@ def get_prompt_status(args: Dict[str, Any]) -> Dict[str, Any]:
         ctx = AgentContext()
         tools_count = len(registry.get_all_definitions())
 
-        # Version berechnen
+        # Version berechnen (jetzt mit aktivem Model)
         version = "dynamic-v1"
         try:
             from backend.prompt_builder import get_prompt_version_only
@@ -167,14 +169,14 @@ def get_prompt_status(args: Dict[str, Any]) -> Dict[str, Any]:
                 active_persona=ctx.active_persona,
                 active_skill=ctx.active_skill,
                 tools_count=tools_count,
-                model=None
+                model=ctx.active_model          # ← wichtig
             )
         except Exception:
             names = ctx.get_active_names()
-            key = f"{names['persona'] or 'none'}|{names['skill'] or 'none'}|{tools_count}"
+            key = f"{names['model'] or 'none'}|{names['persona'] or 'none'}|{names['skill'] or 'none'}|{tools_count}"
             version = f"dynamic-{hash(key) % 100000}"
 
-        # Basis-Status direkt aus AgentContext holen + erweitern
+        # Basis-Status + aktives Model
         status = ctx.to_dict()
         status.update({
             "version": version,
@@ -203,7 +205,7 @@ def get_prompt_status(args: Dict[str, Any]) -> Dict[str, Any]:
 def get_current_context(args: Dict[str, Any]) -> Dict[str, Any]:
     """Returns the full current AgentContext with additional metadata.
     
-    Includes active persona, active skill, prompt version and a human-readable summary.
+    Berücksichtigt jetzt auch das aktive Modell.
     """
     from backend.tools.context import AgentContext
     from backend.tools.registry import registry
@@ -214,7 +216,7 @@ def get_current_context(args: Dict[str, Any]) -> Dict[str, Any]:
         ctx = AgentContext()
         tools_count = len(registry.get_all_definitions())
 
-        # Prompt-Version ermitteln
+        # Prompt-Version ermitteln (mit aktivem Model)
         version = "dynamic-v1"
         try:
             from backend.prompt_builder import get_prompt_version_only
@@ -222,7 +224,7 @@ def get_current_context(args: Dict[str, Any]) -> Dict[str, Any]:
                 active_persona=ctx.active_persona,
                 active_skill=ctx.active_skill,
                 tools_count=tools_count,
-                model=None
+                model=ctx.active_model          # ← wichtig
             )
         except Exception:
             pass
