@@ -361,3 +361,29 @@ def list_tools_by_category(args: Dict[str, Any]) -> Dict[str, Any]:
             "text": text
         }]
     }
+
+
+def set_active_model(args: Dict[str, Any]) -> Dict[str, Any]:
+    """Setzt das aktive Modell für den aktuellen Kontext.
+    
+    Erlaubte Werte: 'grok', 'ollama', 'openai', 'anthropic'
+    """
+    from backend.tools.state import set_active_model as _set_active_model
+
+    model_name = args.get("model", "").strip().lower()
+    if not model_name:
+        return {
+            "content": [{"type": "text", "text": "Error: 'model' parameter is required"}],
+            "isError": True
+        }
+
+    if model_name not in ("grok", "ollama", "openai", "anthropic"):
+        return {
+            "content": [{"type": "text", "text": f"Error: Invalid model '{model_name}'. Allowed: grok, ollama, openai, anthropic"}],
+            "isError": True
+        }
+
+    _set_active_model(model_name)
+    return {
+        "content": [{"type": "text", "text": f"✅ Active model set to: {model_name}"}]
+    }
