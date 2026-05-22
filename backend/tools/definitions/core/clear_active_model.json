@@ -1,0 +1,9 @@
+{
+  "name": "clear_active_model",
+  "description": "Entfernt das aktuell aktive Modell aus dem Kontext. Danach fällt das System auf den Default (Grok) zurück.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {}
+  },
+  "category": "core"
+}

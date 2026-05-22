@@ -1,0 +1,9 @@
+{
+  "name": "get_active_model",
+  "description": "Gibt das aktuell aktive Modell im Kontext zurück.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {}
+  },
+  "category": "core"
+}

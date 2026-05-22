@@ -387,3 +387,38 @@ def set_active_model(args: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "content": [{"type": "text", "text": f"✅ Active model set to: {model_name}"}]
     }
+
+
+def clear_active_model(args: Dict[str, Any]) -> Dict[str, Any]:
+    """Entfernt das aktuell aktive Modell aus dem Kontext.
+    
+    Danach fällt das System wieder auf den Default (Grok) zurück.
+    """
+    from backend.tools.state import clear_active_model as _clear_active_model
+
+    _clear_active_model()
+    return {
+        "content": [{"type": "text", "text": "✅ Active model cleared. System will fall back to default (Grok)."}]
+    }
+
+
+def get_active_model(args: Dict[str, Any]) -> Dict[str, Any]:
+    """Gibt das aktuell aktive Modell zurück."""
+    from backend.tools.context import AgentContext
+    import json
+
+    try:
+        model = AgentContext().active_model
+        if model:
+            return {
+                "content": [{"type": "text", "text": json.dumps({"active_model": model})}]
+            }
+        else:
+            return {
+                "content": [{"type": "text", "text": "No active model set (using default Grok)."}]
+            }
+    except Exception as e:
+        return {
+            "content": [{"type": "text", "text": f"Error getting active model: {str(e)}"}],
+            "isError": True
+        }
