@@ -105,14 +105,15 @@ class AgentContext:
     def get_context_summary(self) -> str:
         """Kurze, menschenlesbare Zusammenfassung des aktuellen Kontexts."""
         names = self.get_active_names()
-        if names["skill"] and names["persona"]:
-            return f"{names['skill']} + {names['persona']}"
-        elif names["skill"]:
-            return names["skill"]
-        elif names["persona"]:
-            return names["persona"]
-        else:
-            return "Default (keine Persona/Skill aktiv)"
+        parts = []
+        if names["model"]:
+            parts.append(names["model"])
+        if names["skill"]:
+            parts.append(names["skill"])
+        if names["persona"]:
+            parts.append(names["persona"])
+
+        return " + ".join(parts) if parts else "Default (no model/persona/skill active)"
 
 
     def to_dict(self) -> Dict[str, Any]:
