@@ -11,7 +11,13 @@ import gradio as gr
 
 # === Handler Imports ===
 from components.prompt_viewer import get_system_prompt
-from components.chat_handler import respond, get_status, refresh_ui_state
+
+from components.chat_handler import (
+    respond, 
+    get_status, 
+    refresh_ui_state, 
+    switch_model_provider
+)
 
 from components.persona_control import (
     apply_persona,
@@ -269,9 +275,13 @@ def wire_initial_demo_loads(
     demo.load(load_initial_skills, outputs=[skill_dropdown])
     demo.load(get_tool_names, outputs=[tool_dropdown])
 
+    def on_model_change(model_choice_value: str):
+        switch_model_provider(model_choice_value)
+        return refresh_ui_state(model_choice_value)
+
     # Model-Wechsel: Zentrale Funktion statt .then()-Kette
     model_choice.change(
-        refresh_ui_state,
+        on_model_change,
         inputs=[model_choice],
         outputs=[
             conn_status,

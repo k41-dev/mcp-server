@@ -5,7 +5,7 @@ from .persona_control import create_persona_control
 from .skill_control import create_skill_control
 from .tools_panel import create_tools_panel
 from .memory_panel import create_memory_panel
-from .chat_handler import respond, get_status, refresh_all
+from .chat_handler import respond, get_status, refresh_all, switch_model_provider
 from .event_wiring import (                 
     wire_persona_controls,
     wire_skill_controls,
@@ -27,6 +27,7 @@ __all__ = [
     "respond",
     "get_status",
     "refresh_all",
+    "switch_model_provider",
     "wire_persona_controls",                  
     "wire_skill_controls",
     "wire_tools_panel",

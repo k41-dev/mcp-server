@@ -46,6 +46,21 @@ def _get_context_line() -> str:
     return " • ".join(context_parts) if context_parts else ""
 
 
+def switch_model_provider(model_choice_value: str) -> str:
+    """
+    Wird beim Ändern des Model-Radios aufgerufen.
+    Setzt den aktiven Provider im Backend-State (Single Source of Truth).
+    """
+    mapping = {
+        "Grok": "grok",
+        "Ollama": "ollama",
+        "OpenAI": "openai",
+        "Anthropic": "anthropic",
+    }
+    provider = mapping.get(model_choice_value, "grok")
+    result = call_mcp_tool("set_active_provider", {"provider": provider})
+    return result
+
 def _stream_final_answer(base_history: list, final_msg: str):
     """
     Streamt die finale Antwort satz-/absatzweise und erhält dabei die Formatierung besser.

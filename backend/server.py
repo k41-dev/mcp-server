@@ -198,7 +198,7 @@ async def mcp_handler(
         elif method == "ping":
             result = {"status": "ok"}
         elif method == "prompts/get_dynamic":
-            model = (params or {}).get("model")
+            requested_model = (params or {}).get("model")
 
             tools_for_prompt = [
                 {
@@ -223,11 +223,7 @@ async def mcp_handler(
                 active_skill = None
                 active_model = None
 
-            if model:
-                from backend.tools.state import set_active_provider
-                set_active_provider(model)
-
-            effective_model = model or active_model
+            effective_model = requested_model or active_model
 
             try:
                 result = build_dynamic_system_prompt(
