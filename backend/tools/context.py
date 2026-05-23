@@ -57,7 +57,7 @@ class AgentContext:
     
     @property
     def provider(self) -> Optional[str]:
-        """Gibt den aktuell aktiven Provider zurück ('grok' | 'ollama' | 'openai' | 'anthropic')."""
+        """Gibt den aktuell aktiven Provider zurück ('xai' | 'ollama' | 'openai' | 'anthropic')."""
         from backend.tools.state import get_active_provider
         return get_active_provider()
 

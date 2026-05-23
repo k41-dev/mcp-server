@@ -98,7 +98,7 @@ class ToolCallParams(BaseModel):
 
 
 # ====================== APP ======================
-app = FastAPI(title="MCP-Server v1.0", version="1.0.0")
+app = FastAPI(title="Wäärkzüüg-Chaschte", version="1.0.0")
 
 
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
@@ -175,7 +175,7 @@ async def mcp_handler(
 
     try:
         if method == "initialize":
-            result = {"protocolVersion": "2024-11-05", "capabilities": {"tools": {"listChanged": False}}, "serverInfo": {"name": "mcp-fastapi-v1", "version": "1.0.0"}}
+            result = {"protocolVersion": "2024-11-05", "capabilities": {"tools": {"listChanged": False}}, "serverInfo": {"name": "Wäärkzüüg-Chaschte", "version": "1.0.0"}}
         elif method == "notifications/initialized":
             result = {}
         elif method == "tools/list":
@@ -237,8 +237,7 @@ async def mcp_handler(
                 result = {"prompt": "Error building prompt", "version": "error"}
         elif method == "models/chat":
             from backend.providers import get_provider
-            # Erwartet: {"provider": "grok" | "ollama", "messages": [...], "tools": [...], "temperature": 0.7, ...}
-            provider_name = (params or {}).get("provider") or (params or {}).get("model", "grok")
+            provider_name = (params or {}).get("provider") or (params or {}).get("model", "xai")
             provider = get_provider(provider_name)
 
             if not provider:
@@ -284,7 +283,7 @@ async def mcp_stream_handler(request: Request):
     body = await request.json()
     params = body.get("params", {}) if isinstance(body, dict) else {}
 
-    provider_name = params.get("provider") or params.get("model", "grok")
+    provider_name = params.get("provider") or params.get("model", "xai")
     provider = get_provider(provider_name)
 
     if not provider:
@@ -346,7 +345,7 @@ def generate_openapi_spec():
     return {
         "openapi": "3.1.0",
         "info": {
-            "title": "MCP-Server",
+            "title": "Wäärkzüüg-Chaschte",
             "version": "1.0.0",
             "description": f"""FastAPI-based MCP server using JSON-RPC 2.0.
 
@@ -355,7 +354,7 @@ def generate_openapi_spec():
 
 Use the single POST /mcp endpoint with JSON-RPC 2.0 format.
 """,
-            "contact": {"name": "Grok MCP"}
+            "contact": {"name": "Wäärkzüüg-Chaschte"}
         },
         "servers": [
             {"url": public_url, "description": "Current ngrok tunnel"}

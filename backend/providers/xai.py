@@ -1,5 +1,5 @@
 """
-grok.py - xAI Grok Provider (OpenAI-kompatibel)
+xai.py - xAI Provider (OpenAI-kompatibel)
 """
 
 from typing import List, Dict, Any, Optional
@@ -7,8 +7,8 @@ from backend.config import settings
 from .base import ModelProvider, register_provider
 
 
-class GrokProvider(ModelProvider):
-    name = "grok"
+class XaiProvider(ModelProvider):
+    name = "xai"
     supports_tool_calling = True
 
     # === NEU: Vererbte Attribute aus base.py ===
@@ -89,5 +89,5 @@ class GrokProvider(ModelProvider):
 
 
 # Automatisch registrieren
-grok_provider = GrokProvider()
-register_provider(grok_provider)
+xai_provider = XaiProvider()
+register_provider(xai_provider)

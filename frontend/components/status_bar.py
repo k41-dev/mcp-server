@@ -41,8 +41,8 @@ def create_status_bar() -> Tuple[gr.Textbox, gr.Textbox, gr.Textbox, gr.Textbox,
             scale=2
         )
         model_choice = gr.Radio(
-            ["Grok", "OpenAI", "Anthropic", "Ollama"],
-            value="Grok",
+            ["xAI", "OpenAI", "Anthropic", "Ollama"],
+            value="xAI",
             label="Model",
             interactive=True,
             scale=1.5

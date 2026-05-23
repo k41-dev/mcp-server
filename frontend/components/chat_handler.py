@@ -52,12 +52,12 @@ def switch_model_provider(model_choice_value: str) -> str:
     Setzt den aktiven Provider im Backend-State (Single Source of Truth).
     """
     mapping = {
-        "Grok": "grok",
+        "xAI": "xai",
         "Ollama": "ollama",
         "OpenAI": "openai",
         "Anthropic": "anthropic",
     }
-    provider = mapping.get(model_choice_value, "grok")
+    provider = mapping.get(model_choice_value, "xai")
     result = call_mcp_tool("set_active_provider", {"provider": provider})
     return result
 
@@ -161,8 +161,8 @@ def _chat_with_agent_generator(message: str, history: list, model_choice: str):
     tools = get_mcp_tools()
 
     # === Provider-Mapping ===
-    if model_choice == "Grok":
-        provider_name = "grok"
+    if model_choice == "xAI":
+        provider_name = "xai"
         model_display = os.getenv("XAI_MODEL")
         MAX_TURNS = 6
     elif model_choice == "OpenAI":
@@ -303,8 +303,8 @@ def chat_with_agent_streaming(message: str, history: list, model_choice: str):
     import time
 
     # === Provider-Mapping ===
-    if model_choice == "Grok":
-        provider_name = "grok"
+    if model_choice == "xAI":
+        provider_name = "xai"
         model_display = os.getenv("XAI_MODEL")
         MAX_TURNS = 6
     elif model_choice == "OpenAI":
@@ -416,12 +416,12 @@ def get_status(model_choice_value: str = "Grok"):
 
         # === Erweitertes Provider-Mapping ===
         model_map = {
-            "Grok": "grok",
+            "xAI": "xai",
             "OpenAI": "openai",
             "Anthropic": "anthropic",
             "Ollama": "ollama"
         }
-        model_for_prompt = model_map.get(model_choice_value, "grok")
+        model_for_prompt = model_map.get(model_choice_value, "xai")
 
         # Active Persona & Skill holen
         persona_name = "None"

@@ -364,34 +364,26 @@ def list_tools_by_category(args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def set_active_provider(args: Dict[str, Any]) -> Dict[str, Any]:
-    """Setzt den aktiven Provider (grok, ollama, openai oder anthropic)."""
+    """Setzt den aktiven Provider (xai, ollama, openai oder anthropic)."""
     from backend.tools.state import set_active_provider as _set_active_provider
-
-    print(f"[DEBUG EXECUTOR] RAW ARGS received: {args}")
-    print(f"[DEBUG EXECUTOR] Type of args: {type(args)}")
-    print(f"[DEBUG EXECUTOR] Keys in args: {list(args.keys()) if isinstance(args, dict) else 'NOT A DICT'}")
 
     # Unterstützt beide möglichen Keys (alter + neuer Name)
     provider_name = args.get("provider") or args.get("model", "")
     provider_name = str(provider_name).strip().lower()
 
-    print(f"[DEBUG EXECUTOR] Extrahierter provider_name = '{provider_name}'")
-
     if not provider_name:
-        print("[DEBUG EXECUTOR] Kein Parameter gefunden → fallback auf grok")
         return {
             "content": [{"type": "text", "text": "Error: 'provider' (oder 'model') Parameter fehlt"}],
             "isError": True
         }
 
-    if provider_name not in ("grok", "ollama", "openai", "anthropic"):
+    if provider_name not in ("xai", "ollama", "openai", "anthropic"):
         return {
             "content": [{"type": "text", "text": f"Error: Ungültiger Provider '{provider_name}'"}],
             "isError": True
         }
 
     _set_active_provider(provider_name)
-    print(f"[DEBUG EXECUTOR] Erfolgreich _set_active_provider('{provider_name}') aufgerufen")
     return {
         "content": [{"type": "text", "text": f"✅ Active provider set to: {provider_name}"}]
     }

@@ -13,16 +13,14 @@ def get_system_prompt(model_choice: str) -> gr.update:
     print(f"[DEBUG] get_system_prompt called with model_choice: '{model_choice}'")
     
     model_map = {
-        "Grok": "grok",
+        "xAI": "xai",
         "OpenAI": "openai",
         "Anthropic": "anthropic",
         "Ollama": "ollama"
     }
-    model = model_map.get(model_choice, "grok")
-    print(f"[DEBUG] → mapped to backend model: '{model}'")
+    model = model_map.get(model_choice, "xai")
 
     data = mcp_jsonrpc("prompts/get_dynamic", {"model": model})
-    print(f"[DEBUG] MCP Response → keys: {list(data.keys()) if isinstance(data, dict) else 'N/A'}")
 
     if data and isinstance(data, dict) and "prompt" in data:
         prompt_text = data["prompt"]

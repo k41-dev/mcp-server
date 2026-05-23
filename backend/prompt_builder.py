@@ -24,11 +24,11 @@ OLLAMA_MODEL = settings.OLLAMA_MODEL
 def _get_model_family(model_name: str) -> str:
     """Determine model family for prompt selection and provider routing."""
     if not model_name:
-        return "grok"
+        return "xai"
 
     name = model_name.lower()
-    if "grok" in name or "xai" in name:
-        return "grok"
+    if "xai" in name in name:
+        return "xai"
     if "claude" in name or "anthropic" in name:
         return "anthropic"
     if "gpt" in name or "o1" in name or "openai" in name:
@@ -46,7 +46,7 @@ def _compute_prompt_version(
     Berechnet eine stabile Versions-ID für den aktuellen Prompt-Zustand.
     Die Version ändert sich, wenn sich Persona, Skill, Tool-Anzahl oder das Modell ändert.
     """
-    model_family = _get_model_family(model) if model else "grok"
+    model_family = _get_model_family(model) if model else "xai"
     persona_part = active_persona.get("name", "none") if active_persona else "none"
     skill_part = active_skill.get("name", "none") if active_skill else "none"
     
@@ -63,7 +63,7 @@ def get_base_prompt(model: str = None) -> str:
 
     family = _get_model_family(model)
 
-    if family == "grok":
+    if family == "xai":
         filename = os.getenv("SYSTEM_PROMPT_GROK", "system_prompt_grok.md")
     elif family == "openai":
         filename = os.getenv("SYSTEM_PROMPT_OPENAI", "system_prompt_openai.md")
@@ -85,7 +85,7 @@ def get_base_prompt(model: str = None) -> str:
         return "You are a capable AI agent powered by OpenAI with secure access to MCP tools."
     elif family == "anthropic":
         return "You are a careful and precise AI agent powered by Anthropic Claude with access to MCP tools."
-    elif family == "grok":
+    elif family == "xai":
         return "You are Grok, an autonomous agent with secure access to MCP tools."
     else:
         return "You are a capable local AI agent with access to external tools via the MCP protocol."
@@ -127,7 +127,7 @@ def build_dynamic_system_prompt(
     Returns: {"prompt": str, "version": str}
     """
     # Saubere Model-Normalisierung – Single Source of Truth
-    effective_model = model or XAI_MODEL or "grok"
+    effective_model = model or XAI_MODEL or "xai"
 
     base_prompt = get_base_prompt(effective_model)
 

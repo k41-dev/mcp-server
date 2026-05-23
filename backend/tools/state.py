@@ -63,18 +63,16 @@ def clear_active_skill() -> None:
 # ====================== ACTIVE PROVIDER ======================
 def set_active_provider(provider: str) -> None:
     provider = provider.lower().strip()
-    if provider not in ("grok", "ollama", "openai", "anthropic"):
-        provider = "grok"
+    if provider not in ("xai", "ollama", "openai", "anthropic"):
+        provider = "xai"
 
     _active_provider[DEFAULT_SESSION_ID] = provider
-    print(f"[STATE DEBUG] set_active_provider → {provider} | Inhalt: {_active_provider}")   # ← NEU
 
     publish(EventTypes.MODEL_CHANGED, {"provider": provider})
 
 
 def get_active_provider() -> Optional[str]:
     result = _active_provider.get(DEFAULT_SESSION_ID)
-    print(f"[STATE DEBUG] get_active_provider → {result} | Inhalt: {_active_provider}")     # ← NEU
     return result
 
 
@@ -91,7 +89,7 @@ def get_active_model() -> Optional[str]:
 
     if p == "ollama":
         return settings.OLLAMA_MODEL
-    elif p == "grok":
+    elif p == "xai":
         return settings.XAI_MODEL
     elif p == "openai":
         return settings.OPENAI_MODEL
