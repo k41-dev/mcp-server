@@ -42,8 +42,8 @@ def create_ui():
     css_path = Path(__file__).parent / "style.css"
     custom_css = css_path.read_text(encoding="utf-8") if css_path.exists() else ""
 
-    with gr.Blocks(title="MCP-Server", css=custom_css) as demo:
-        gr.Markdown("# 🚀 MCP-Server")
+    with gr.Blocks(title="Wäärkzüüg-Chaschte 🧰", css=custom_css) as demo:
+        gr.Markdown("# Wäärkzüüg-Chaschte 🧰")
 
         # ========== TOP STATUS BAR ==========
         conn_status, prompt_version, active_persona, active_skill, model_choice = create_status_bar()
