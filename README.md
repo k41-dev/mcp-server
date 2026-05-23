@@ -1,4 +1,4 @@
-# MCP Server v1.0.0
+# Wäärkzüüg-Chaschte 🧰
 
 **Production-grade autonomous agent server** with JSON-RPC MCP endpoint, persistent vector memory, dynamic persona/skill injection, and dual-model support (Grok + Ollama).
 
@@ -367,5 +367,58 @@ Nach mehreren schmerzhaften Restrukturierungen war `layout.py` zu einem monolith
 *“Langfristige Stabilität > schnelle Hacks.”*
 
 ---
+
+## Neueste Verbesserungen (Mai 2026)
+
+### 1. Provider-Umstrukturierung & Renaming
+
+Das Projekt wurde konsequent auf eine saubere Provider-Architektur umgestellt:
+
+- **"grok" → "xAI"**: Vollständiges internes Renaming des primären Providers  
+  - Datei `backend/providers/grok.py` → `xai.py`
+  - Klasse `GrokProvider` → `XAIProvider`
+  - Interner Key einheitlich `"xai"`
+- **Neue Provider hinzugefügt**:
+  - **OpenAI** (GPT-4o, o1 etc.)
+  - **Anthropic** (Claude)
+- Alle Provider nutzen jetzt die zentrale `ModelProvider`-Abstraktion (`backend/providers/base.py`)
+- Sauberes Mapping in `state.py`, `core.py`, `chat_handler.py` und `prompt_builder.py`
+
+Das System ist nun deutlich erweiterbar und zukunftssicher.
+
+### 2. Projekt-Umbenennung
+
+Das Projekt trägt jetzt offiziell den Namen:
+
+**Wäärkzüüg-Chaschte 🧰**
+
+- Gradio-UI-Titel und Browser-Tab aktualisiert
+- FastAPI-App-Titel angepasst
+- Alle relevanten Stellen im Code und in der Dokumentation konsistent umbenannt
+
+### 3. Verbesserte UI-States & neue Tools
+
+Die Benutzeroberfläche wurde deutlich stabiler und informativer:
+
+- **Live Status-Bar** zeigt nun immer korrekt:
+  - Verbindungsstatus + Tool-Anzahl
+  - Aktuelle Prompt-Version
+  - Aktive Persona + Skill
+  - Gewähltes Modell (xAI / OpenAI / Anthropic / Ollama)
+- **Neue Tools** für bessere Kontrolle:
+  - `set_active_provider`
+  - `get_active_provider`
+  - `get_active_model`
+  - `clear_active_provider`
+- Automatische Synchronisation aller UI-Elemente nach Model-Wechsel, Persona- oder Skill-Aktivierung
+- Verbesserter System-Prompt-Viewer mit exakter, live generierter Prompt-Anzeige
+- Bessere Fehlerbehandlung und visuelles Feedback bei Tool-Ausführung
+
+Diese Änderungen sorgen für deutlich mehr Transparenz und verhindern Desynchronisation zwischen Backend-State und UI.
+
+---
+
+**Zusammenfassung:**  
+Wäärkzüüg-Chaschte 🧰 ist nun eine saubere, erweiterbare und professionell strukturierte Agenten-Plattform mit klarer Provider-Architektur und einer sehr stabilen Benutzeroberfläche.
 
 *Clean single-file documentation for v1.0.0 — 2026-05-18*
