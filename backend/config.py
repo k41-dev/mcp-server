@@ -32,7 +32,7 @@ class Settings:
     OPENAI_MODEL: str = os.getenv("OPENAI_MODEL", "")    
     
     # === Default ===
-    DEFAULT_MODEL_PROVIDER: str = os.getenv("DEFAULT_MODEL_PROVIDER", "grok")
+    DEFAULT_MODEL_PROVIDER: str = os.getenv("DEFAULT_MODEL_PROVIDER", "xai")
 
     # === MCP Server ===
     MCP_PUBLIC_URL: str = os.getenv("MCP_PUBLIC_URL", "http://localhost:8321")

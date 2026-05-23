@@ -368,7 +368,7 @@ def set_active_provider(args: Dict[str, Any]) -> Dict[str, Any]:
     from backend.tools.state import set_active_provider as _set_active_provider
 
     # Unterstützt beide möglichen Keys (alter + neuer Name)
-    provider_name = args.get("provider") or args.get("model", "")
+    provider_name = args.get("provider") or args.get("model")
     provider_name = str(provider_name).strip().lower()
 
     if not provider_name:
