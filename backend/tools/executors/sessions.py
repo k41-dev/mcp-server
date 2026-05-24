@@ -86,8 +86,8 @@ def get_session(args: Dict[str, Any]) -> Dict[str, Any]:
 
 def switch_session(args: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Wechselt in eine andere Session und lädt deren gespeicherten Context
-    (Persona, Skill, Provider), falls vorhanden.
+    Wechselt in eine andere Session und lädt deren gespeicherten Context.
+    Nutzt die saubere Session-Verwaltung über SessionManager.
     """
     from backend.tools.context import AgentContext
 
@@ -101,7 +101,7 @@ def switch_session(args: Dict[str, Any]) -> Dict[str, Any]:
 
     try:
         session_id = int(session_id)
-        ctx = AgentContext()
+        ctx = AgentContext.current()                    # ← sauber über current()
 
         success = ctx.switch_to_session(session_id)
 
@@ -109,59 +109,60 @@ def switch_session(args: Dict[str, Any]) -> Dict[str, Any]:
             return {
                 "content": [{
                     "type": "text",
-                    "text": f"✅ Erfolgreich zu Session {session_id} gewechselt. Context wurde geladen."
+                    "text": f"✅ Erfolgreich zu Session {session_id} gewechselt."
                 }]
             }
         else:
             return {
                 "content": [{
                     "type": "text",
-                    "text": f"⚠️ Session {session_id} wurde nicht gefunden oder konnte nicht geladen werden."
+                    "text": f"Session {session_id} nicht gefunden."
                 }],
                 "isError": True
             }
 
     except Exception as e:
         return {
-            "content": [{"type": "text", "text": f"Error beim Wechseln der Session: {str(e)}"}],
+            "content": [{"type": "text", "text": f"Error beim Session-Wechsel: {str(e)}"}],
             "isError": True
         }
 
 
 def save_current_context(args: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Speichert den aktuellen Context (aktive Persona, Skill und Provider)
-    in die aktuelle oder eine angegebene Session.
+    Speichert den aktuellen Context in die aktuelle Session.
+    Nutzt AgentContext.current() für korrekte Session-Zuordnung.
     """
     from backend.tools.context import AgentContext
 
-    session_id = args.get("session_id")
-
     try:
-        ctx = AgentContext()
+        ctx = AgentContext.current()                    # ← wichtig!
+
+        # Optional: session_id aus Argumenten erlauben (für Flexibilität)
+        session_id = args.get("session_id")
         target_session = int(session_id) if session_id else None
 
         success = ctx.save_context_to_session(session_id=target_session)
 
         if success:
-            active_id = target_session or ctx.session_id
+            active_session = target_session or ctx.session_id
             return {
                 "content": [{
                     "type": "text",
-                    "text": f"✅ Context wurde in Session {active_id} gespeichert."
+                    "text": f"✅ Context in Session {active_session} gespeichert."
                 }]
             }
         else:
             return {
                 "content": [{
                     "type": "text",
-                    "text": "⚠️ Context konnte nicht gespeichert werden."
+                    "text": "Context konnte nicht gespeichert werden."
                 }],
                 "isError": True
             }
 
     except Exception as e:
         return {
-            "content": [{"type": "text", "text": f"Error beim Speichern des Context: {str(e)}"}],
+            "content": [{"type": "text", "text": f"Error beim Speichern: {str(e)}"}],
             "isError": True
         }

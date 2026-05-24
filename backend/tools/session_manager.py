@@ -53,9 +53,11 @@ class SessionManager:
             (display_name, now, now, None)
         )
         session_id = cur.lastrowid
-
+        
         conn.commit()
         conn.close()
+        
+        SessionManager.set_current_session_id(session_id)
         return session_id
 
     def get_session(self, session_id: int) -> Optional[Dict[str, Any]]:
@@ -165,6 +167,25 @@ class SessionManager:
         conn.commit()
         conn.close()
         return DEFAULT_SESSION_ID
+
+    
+    _current_session_id: int = DEFAULT_SESSION_ID
+
+    @classmethod
+    def get_current_session_id(cls) -> int:
+        """Gibt die aktuell aktive Session zurück."""
+        return cls._current_session_id
+
+
+    @classmethod
+    def set_current_session_id(cls, session_id: int) -> None:
+        """Setzt die aktuell aktive Session."""
+        cls._current_session_id = session_id
+
+
+    def get_current_session(self) -> Optional[Dict[str, Any]]:
+        """Gibt die aktuell aktive Session mit allen Daten zurück."""
+        return self.get_session(self._current_session_id)
 
 
 # Globale Instanz

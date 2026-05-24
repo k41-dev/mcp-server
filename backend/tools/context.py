@@ -138,19 +138,10 @@ class AgentContext:
 
     # ====================== Session ======================
     def switch_to_session(self, session_id: int) -> bool:
-        """
-        Wechselt zu einer anderen Session.
-        Lädt den gespeicherten Context (Persona + Skill + Provider) aus der Datenbank,
-        falls vorhanden.
-        """
         from backend.tools.session_manager import session_manager
         from backend.tools.state import (
-            set_active_persona,
-            set_active_skill,
-            set_active_provider,
-            clear_active_persona,
-            clear_active_skill,
-            clear_active_provider,
+            set_active_persona, set_active_skill, set_active_provider,
+            clear_active_persona, clear_active_skill, clear_active_provider,
         )
 
         session_data = session_manager.get_session(session_id)
@@ -159,20 +150,16 @@ class AgentContext:
 
         context = session_data.get("context", {})
 
-        # Aktuellen Context zurücksetzen
+        # Alten Context zurücksetzen
         clear_active_persona(session_id=self.session_id)
         clear_active_skill(session_id=self.session_id)
         clear_active_provider(session_id=self.session_id)
 
-        # Neuen Context laden (falls vorhanden)
+        # Neuen Context laden
         if context.get("persona"):
             p = context["persona"]
-            set_active_persona(
-                p.get("name", ""),
-                p.get("instructions", ""),
-                p.get("intensity", 7),
-                session_id=session_id
-            )
+            set_active_persona(p.get("name", ""), p.get("instructions", ""), 
+                            p.get("intensity", 7), session_id=session_id)
 
         if context.get("skill"):
             s = context["skill"]
@@ -181,8 +168,10 @@ class AgentContext:
         if context.get("provider"):
             set_active_provider(context["provider"], session_id=session_id)
 
-        # Session-ID der Instanz aktualisieren
+        # Wichtig: Session wechseln + global als aktiv markieren
         self.session_id = session_id
+        session_manager.set_current_session_id(session_id)
+
         return True
 
     def save_context_to_session(self, session_id: Optional[int] = None) -> bool:
@@ -205,8 +194,9 @@ class AgentContext:
     # ====================== CLASSMETHODS ======================
     @classmethod
     def current(cls) -> "AgentContext":
-        """Gibt die Default-Instanz zurück (bequem für schnelle Zugriffe)."""
-        return default_context
+        """Gibt eine AgentContext-Instanz für die aktuell aktive Session zurück."""
+        from backend.tools.session_manager import session_manager
+        return cls(session_id=session_manager.get_current_session_id())
 
 
 # ====================== GLOBAL DEFAULT INSTANCE ======================
