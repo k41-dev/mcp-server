@@ -22,6 +22,7 @@ from backend.tools.registry import registry as _registry
 from backend.prompt_builder import build_dynamic_system_prompt
 from backend.config import settings
 from backend.dependencies import AgentContextDep, RegistryDep, SettingsDep
+from backend.tools.state import get_active_provider as _get_active_provider, set_active_provider as _set_active_provider
 
 
 # ====================== LOGGING ======================
@@ -455,6 +456,17 @@ async def health_check(
         }
 
 
+# ====================== DEFAULT PROVIDER INITIALIZATION ======================
+_initial_provider = _get_active_provider()
+if not _initial_provider:
+    default_provider = (settings.DEFAULT_MODEL_PROVIDER or "xai").lower().strip()
+    if default_provider not in ("xai", "ollama", "openai", "anthropic"):
+        default_provider = "xai"
+    _set_active_provider(default_provider)
+    logger.info(f"✅ Default provider initialized on startup: {default_provider}")
+
+
+# ====================== MAIN ======================
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8321)
