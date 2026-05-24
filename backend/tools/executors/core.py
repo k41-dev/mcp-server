@@ -148,20 +148,17 @@ def get_server_info(args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def get_prompt_status(args: Dict[str, Any]) -> Dict[str, Any]:
-    """Returns current prompt version + active persona/skill/model.
-    
-    Berücksichtigt jetzt auch das aktive Modell aus dem Kontext.
-    """
+    """Returns current prompt version + active persona/skill/model."""
     import json
     import datetime
     from backend.tools.context import AgentContext
     from backend.tools.registry import registry
 
     try:
-        ctx = AgentContext()
+        ctx = AgentContext()                    # Default Session
         tools_count = len(registry.get_all_definitions())
 
-        # Version berechnen (jetzt mit aktivem Model)
+        # Version berechnen
         version = "dynamic-v1"
         try:
             from backend.prompt_builder import get_prompt_version_only
@@ -169,7 +166,7 @@ def get_prompt_status(args: Dict[str, Any]) -> Dict[str, Any]:
                 active_persona=ctx.active_persona,
                 active_skill=ctx.active_skill,
                 tools_count=tools_count,
-                model=ctx.active_model          # ← wichtig
+                model=ctx.active_model
             )
         except Exception:
             names = ctx.get_active_names()
@@ -203,20 +200,17 @@ def get_prompt_status(args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def get_current_context(args: Dict[str, Any]) -> Dict[str, Any]:
-    """Returns the full current AgentContext with additional metadata.
-    
-    Berücksichtigt jetzt auch das aktive Modell.
-    """
+    """Returns the full current AgentContext with additional metadata."""
     from backend.tools.context import AgentContext
     from backend.tools.registry import registry
     import json
     import datetime
 
     try:
-        ctx = AgentContext()
+        ctx = AgentContext()                    # Default Session
         tools_count = len(registry.get_all_definitions())
 
-        # Prompt-Version ermitteln (mit aktivem Model)
+        # Prompt-Version ermitteln
         version = "dynamic-v1"
         try:
             from backend.prompt_builder import get_prompt_version_only
@@ -224,7 +218,7 @@ def get_current_context(args: Dict[str, Any]) -> Dict[str, Any]:
                 active_persona=ctx.active_persona,
                 active_skill=ctx.active_skill,
                 tools_count=tools_count,
-                model=ctx.active_model          # ← wichtig
+                model=ctx.active_model
             )
         except Exception:
             pass
@@ -368,7 +362,7 @@ def set_active_provider(args: Dict[str, Any]) -> Dict[str, Any]:
     from backend.tools.state import set_active_provider as _set_active_provider
 
     # Unterstützt beide möglichen Keys (alter + neuer Name)
-    provider_name = args.get("provider") or args.get("model")
+    provider_name = args.get("provider") or args.get("model", "")
     provider_name = str(provider_name).strip().lower()
 
     if not provider_name:
@@ -383,7 +377,7 @@ def set_active_provider(args: Dict[str, Any]) -> Dict[str, Any]:
             "isError": True
         }
 
-    _set_active_provider(provider_name)
+    _set_active_provider(provider_name)   # nutzt Default-Session
     return {
         "content": [{"type": "text", "text": f"✅ Active provider set to: {provider_name}"}]
     }
@@ -395,14 +389,14 @@ def get_active_provider(args: Dict[str, Any]) -> Dict[str, Any]:
     import json
 
     try:
-        provider = _get_active_provider()
+        provider = _get_active_provider()   # Default-Session
         if provider:
             return {
                 "content": [{"type": "text", "text": json.dumps({"active_provider": provider})}]
             }
         else:
             return {
-                "content": [{"type": "text", "text": "No active provider set (using default Grok)."}]
+                "content": [{"type": "text", "text": "No active provider set (using default)."}]
             }
     except Exception as e:
         return {
@@ -417,7 +411,7 @@ def clear_active_provider(args: Dict[str, Any]) -> Dict[str, Any]:
 
     _clear_active_provider()
     return {
-        "content": [{"type": "text", "text": "✅ Active provider cleared. System will fall back to default (Grok)."}]
+        "content": [{"type": "text", "text": "✅ Active provider cleared. System will fall back to default."}]
     }
 
 

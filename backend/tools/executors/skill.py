@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-skill.py - Skill Tools (angepasst an zentralen State-Manager)
+skill.py - Skill Tools
 """
 
 import json
@@ -34,6 +34,7 @@ def list_skills(args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def execute_skill(args: Dict[str, Any]) -> Dict[str, Any]:
+    """Aktiviert einen Skill (empfohlener Weg)."""
     skill_name = args.get("skill_name", "").strip().lower()
     if not skill_name:
         return {"content": [{"type": "text", "text": "Error: skill_name is required"}], "isError": True}
@@ -47,6 +48,7 @@ def execute_skill(args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def set_active_skill(args: Dict[str, Any]) -> Dict[str, Any]:
+    """Setzt einen aktiven Skill (Legacy/Alternative zu execute_skill)."""
     skill_name = args.get("skill_name", "").strip().lower()
     content = args.get("content", "").strip()
 

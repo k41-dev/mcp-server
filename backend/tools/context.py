@@ -1,22 +1,20 @@
 #!/usr/bin/env python3
 """
 context.py - AgentContext: Zentrale, typsichere Abstraktionsschicht
-             über dem transienten State (persona + skill).
+             über dem transienten State (persona + skill + provider).
 
 Single Source of Truth für alle Komponenten, die den aktuellen
 Laufzeit-Kontext brauchen (prompt_builder, server, Tools, Logging).
 
-Design-Prinzipien:
-- Minimal-invasiv
-- Leicht testbar (einfach zu mocken)
-- Vorbereitet auf Multi-Session (session_id als Parameter)
-- Keine Business-Logik — nur Query-Interface + Convenience-Methoden
+Jetzt vollständig session-fähig vorbereitet für Multi-Session / Multi-Agent.
 """
 
 from typing import Optional, Dict, Any
 from backend.tools.state import (
     get_active_persona as _get_active_persona,
     get_active_skill as _get_active_skill,
+    get_active_provider as _get_active_provider,
+    get_active_model as _get_active_model,
 )
 from backend.memory import DEFAULT_SESSION_ID
 
@@ -24,60 +22,51 @@ from backend.memory import DEFAULT_SESSION_ID
 class AgentContext:
     """Zentrale Laufzeit-Kontext-Klasse für den aktuellen Agenten.
 
-    Alle Abfragen nach aktiver Persona oder Skill sollten **ausschließlich**
-    über diese Klasse laufen (nicht direkt auf state.py).
+    Alle Abfragen nach aktiver Persona, Skill oder Provider sollten
+    **ausschließlich** über diese Klasse laufen.
     """
 
     def __init__(self, session_id: int = DEFAULT_SESSION_ID):
         self.session_id = session_id
 
-
     # ====================== PROPERTIES ======================
     @property
     def active_persona(self) -> Optional[Dict[str, Any]]:
-        """Gibt die aktuell aktive Persona zurück oder None."""
-        return _get_active_persona()
-
+        """Gibt die aktuell aktive Persona der Session zurück oder None."""
+        return _get_active_persona(session_id=self.session_id)
 
     @property
     def active_skill(self) -> Optional[Dict[str, Any]]:
-        """Gibt den aktuell aktiven Skill zurück oder None."""
-        return _get_active_skill()
-
+        """Gibt den aktuell aktiven Skill der Session zurück oder None."""
+        return _get_active_skill(session_id=self.session_id)
 
     @property
     def has_active_skill(self) -> bool:
         return self.active_skill is not None
 
-
     @property
     def has_active_persona(self) -> bool:
         return self.active_persona is not None
 
-    
     @property
     def provider(self) -> Optional[str]:
-        """Gibt den aktuell aktiven Provider zurück ('xai' | 'ollama' | 'openai' | 'anthropic')."""
-        from backend.tools.state import get_active_provider
-        return get_active_provider()
-
+        """Gibt den aktuell aktiven Provider der Session zurück."""
+        return _get_active_provider(session_id=self.session_id)
 
     @property
     def active_model(self) -> Optional[str]:
         """
-        Gibt den **konkreten Modellnamen** aus den Settings zurück,
+        Gibt den **konkreten Modellnamen** der Session zurück,
         basierend auf dem aktiven Provider.
         """
-        from backend.tools.state import get_active_model
-        return get_active_model()
-
+        return _get_active_model(session_id=self.session_id)
 
     # ====================== CONVENIENCE ======================
     def get_prompt_injection(self) -> str:
         """Liefert den fertigen Prompt-Injection-String für Persona + Skill.
 
         Garantiert, dass beide (falls aktiv) immer enthalten sind.
-        Skill wird zuerst angehängt, Persona danach.
+        Skill hat Vorrang vor Persona.
         """
         parts: list[str] = []
 
@@ -93,7 +82,6 @@ class AgentContext:
                 f"**AKTIVE PERSONA: {persona['name'].upper()}**\n{persona['instructions']}"
             )
 
-        # Optionaler Hinweis nur, wenn BEIDE aktiv sind
         if self.active_skill and self.active_persona:
             parts.append(
                 "**Hinweis:** Der aktive Skill hat Vorrang vor der Persona, "
@@ -102,9 +90,8 @@ class AgentContext:
 
         return "\n\n".join(parts) if parts else ""
 
-
     def get_active_names(self) -> Dict[str, Optional[str]]:
-        """Gibt die Namen der aktiven Komponenten zurück."""
+        """Gibt die Namen der aktiven Komponenten der aktuellen Session zurück."""
         return {
             "provider": self.provider,
             "model": self.active_model,
@@ -112,9 +99,8 @@ class AgentContext:
             "skill": self.active_skill.get("name") if self.active_skill else None,
         }
 
-
     def get_context_summary(self) -> str:
-        """Kurze, menschenlesbare Zusammenfassung des aktuellen Kontexts."""
+        """Kurze, menschenlesbare Zusammenfassung des aktuellen Kontexts der Session."""
         names = self.get_active_names()
         parts = []
         if names["model"]:
@@ -128,12 +114,8 @@ class AgentContext:
 
         return " + ".join(parts) if parts else "Default (no model/persona/skill active)"
 
-
     def to_dict(self) -> Dict[str, Any]:
-        """Gibt den kompletten aktuellen Kontext als Dictionary zurück.
-
-        Sehr nützlich für get_prompt_status, Logging und Debugging.
-        """
+        """Gibt den kompletten aktuellen Kontext der Session als Dictionary zurück."""
         return {
             "session_id": self.session_id,
             "provider": self.provider,
@@ -145,11 +127,13 @@ class AgentContext:
             "summary": self.get_context_summary(),
         }
 
-
     def __repr__(self) -> str:
         names = self.get_active_names()
-        return f"AgentContext(persona={names['persona']}, skill={names['skill']})"
-
+        return (
+            f"AgentContext(session_id={self.session_id}, "
+            f"persona={names['persona']}, skill={names['skill']}, "
+            f"provider={names['provider']})"
+        )
 
     # ====================== CLASSMETHODS ======================
     @classmethod

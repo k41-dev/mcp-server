@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """
-persona.py - Persona Tools (Debug)
+persona.py - Persona Tools
 """
 
 import json
-from pathlib import Path
 from typing import Dict, Any
 from backend.tools.repositories.persona_repository import discover_personas, get_persona_content
 from backend.tools.state import (
@@ -12,6 +11,7 @@ from backend.tools.state import (
     clear_active_persona as _clear_active_persona,
 )
 from backend.tools.context import AgentContext
+
 
 def set_active_persona(args: Dict[str, Any]) -> Dict[str, Any]:
     """Setzt eine Persona (lädt bei Bedarf automatisch aus dem Repository)."""
@@ -28,6 +28,7 @@ def set_active_persona(args: Dict[str, Any]) -> Dict[str, Any]:
         if not instructions:
             return {"content": [{"type": "text", "text": f"Error: Unknown persona '{persona_name}'."}], "isError": True}
 
+    # Session-fähig (aktuell immer Default-Session)
     _set_active_persona(persona_name, instructions, intensity)
 
     return {
