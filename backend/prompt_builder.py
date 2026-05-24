@@ -26,12 +26,13 @@ def _get_model_family(model_name: str) -> str:
     if not model_name:
         return "xai"
 
-    name = model_name.lower()
-    if "xai" in name in name:
+    name = model_name.lower().strip()
+
+    if name in ("xai", "grok") or "grok" in name or "xai" in name:
         return "xai"
-    if "claude" in name or "anthropic" in name:
+    if name in ("anthropic", "claude") or "claude" in name or "anthropic" in name:
         return "anthropic"
-    if "gpt" in name or "o1" in name or "openai" in name:
+    if name in ("openai", "gpt", "o1") or "gpt" in name or "o1" in name or "openai" in name:
         return "openai"
     return "ollama"
 
