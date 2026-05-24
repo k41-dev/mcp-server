@@ -82,3 +82,86 @@ def get_session(args: Dict[str, Any]) -> Dict[str, Any]:
             "content": [{"type": "text", "text": f"Error getting session: {str(e)}"}],
             "isError": True
         }
+
+
+def switch_session(args: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Wechselt in eine andere Session und lädt deren gespeicherten Context
+    (Persona, Skill, Provider), falls vorhanden.
+    """
+    from backend.tools.context import AgentContext
+
+    session_id = args.get("session_id")
+
+    if not session_id:
+        return {
+            "content": [{"type": "text", "text": "Error: session_id ist erforderlich"}],
+            "isError": True
+        }
+
+    try:
+        session_id = int(session_id)
+        ctx = AgentContext()
+
+        success = ctx.switch_to_session(session_id)
+
+        if success:
+            return {
+                "content": [{
+                    "type": "text",
+                    "text": f"✅ Erfolgreich zu Session {session_id} gewechselt. Context wurde geladen."
+                }]
+            }
+        else:
+            return {
+                "content": [{
+                    "type": "text",
+                    "text": f"⚠️ Session {session_id} wurde nicht gefunden oder konnte nicht geladen werden."
+                }],
+                "isError": True
+            }
+
+    except Exception as e:
+        return {
+            "content": [{"type": "text", "text": f"Error beim Wechseln der Session: {str(e)}"}],
+            "isError": True
+        }
+
+
+def save_current_context(args: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Speichert den aktuellen Context (aktive Persona, Skill und Provider)
+    in die aktuelle oder eine angegebene Session.
+    """
+    from backend.tools.context import AgentContext
+
+    session_id = args.get("session_id")
+
+    try:
+        ctx = AgentContext()
+        target_session = int(session_id) if session_id else None
+
+        success = ctx.save_context_to_session(session_id=target_session)
+
+        if success:
+            active_id = target_session or ctx.session_id
+            return {
+                "content": [{
+                    "type": "text",
+                    "text": f"✅ Context wurde in Session {active_id} gespeichert."
+                }]
+            }
+        else:
+            return {
+                "content": [{
+                    "type": "text",
+                    "text": "⚠️ Context konnte nicht gespeichert werden."
+                }],
+                "isError": True
+            }
+
+    except Exception as e:
+        return {
+            "content": [{"type": "text", "text": f"Error beim Speichern des Context: {str(e)}"}],
+            "isError": True
+        }

@@ -135,6 +135,73 @@ class AgentContext:
             f"provider={names['provider']})"
         )
 
+
+    # ====================== Session ======================
+    def switch_to_session(self, session_id: int) -> bool:
+        """
+        Wechselt zu einer anderen Session.
+        Lädt den gespeicherten Context (Persona + Skill + Provider) aus der Datenbank,
+        falls vorhanden.
+        """
+        from backend.tools.session_manager import session_manager
+        from backend.tools.state import (
+            set_active_persona,
+            set_active_skill,
+            set_active_provider,
+            clear_active_persona,
+            clear_active_skill,
+            clear_active_provider,
+        )
+
+        session_data = session_manager.get_session(session_id)
+        if not session_data:
+            return False
+
+        context = session_data.get("context", {})
+
+        # Aktuellen Context zurücksetzen
+        clear_active_persona(session_id=self.session_id)
+        clear_active_skill(session_id=self.session_id)
+        clear_active_provider(session_id=self.session_id)
+
+        # Neuen Context laden (falls vorhanden)
+        if context.get("persona"):
+            p = context["persona"]
+            set_active_persona(
+                p.get("name", ""),
+                p.get("instructions", ""),
+                p.get("intensity", 7),
+                session_id=session_id
+            )
+
+        if context.get("skill"):
+            s = context["skill"]
+            set_active_skill(s.get("name", ""), s.get("content", ""), session_id=session_id)
+
+        if context.get("provider"):
+            set_active_provider(context["provider"], session_id=session_id)
+
+        # Session-ID der Instanz aktualisieren
+        self.session_id = session_id
+        return True
+
+    def save_context_to_session(self, session_id: Optional[int] = None) -> bool:
+        """
+        Speichert den aktuellen transienten Context (Persona, Skill, Provider)
+        in die angegebene Session (oder in die aktuelle Session).
+        """
+        from backend.tools.session_manager import session_manager
+
+        target_session = session_id or self.session_id
+
+        context_data = {
+            "persona": self.active_persona,
+            "skill": self.active_skill,
+            "provider": self.provider,
+        }
+
+        return session_manager.update_session_context(target_session, context_data)
+
     # ====================== CLASSMETHODS ======================
     @classmethod
     def current(cls) -> "AgentContext":

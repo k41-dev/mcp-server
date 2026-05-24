@@ -1,0 +1,15 @@
+{
+  "name": "switch_session",
+  "description": "Wechselt in eine andere Session und lädt den dort gespeicherten Context (aktive Persona, Skill und Provider).",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "session_id": {
+        "type": "integer",
+        "description": "Die ID der Session, zu der gewechselt werden soll"
+      }
+    },
+    "required": ["session_id"]
+  },
+  "category": "session"
+}

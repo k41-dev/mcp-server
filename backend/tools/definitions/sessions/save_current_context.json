@@ -1,0 +1,15 @@
+{
+  "name": "save_current_context",
+  "description": "Speichert den aktuellen Context (aktive Persona, Skill und Provider) in die aktuelle oder eine angegebene Session.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "session_id": {
+        "type": "integer",
+        "description": "Optionale Session-ID. Wenn nicht angegeben, wird der Context in die aktuelle Session gespeichert."
+      }
+    },
+    "required": []
+  },
+  "category": "session"
+}
