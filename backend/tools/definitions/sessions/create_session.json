@@ -1,0 +1,15 @@
+{
+  "name": "create_session",
+  "description": "Erzeugt eine neue Session. Optional kann ein Name vergeben werden.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "Optionaler Name für die neue Session"
+      }
+    },
+    "required": []
+  },
+  "category": "session"
+}

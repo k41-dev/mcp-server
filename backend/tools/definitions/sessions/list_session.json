@@ -1,0 +1,10 @@
+{
+  "name": "list_sessions",
+  "description": "Listet alle vorhandenen Sessions mit ID, Name und letzter Aktivität auf.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "category": "session"
+}
