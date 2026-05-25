@@ -404,12 +404,17 @@ def get_active_provider(args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def clear_active_provider(args: Dict[str, Any]) -> Dict[str, Any]:
-    """Entfernt den aktuell aktiven Provider aus dem Kontext."""
+    from backend.tools.context import AgentContext
     from backend.tools.state import clear_active_provider as _clear_active_provider
 
-    _clear_active_provider()
+    ctx = AgentContext.current()
+    _clear_active_provider(session_id=ctx.session_id)
+
     return {
-        "content": [{"type": "text", "text": "✅ Active provider cleared. System will fall back to default."}]
+        "content": [{
+            "type": "text",
+            "text": f"✅ Active provider cleared in Session {ctx.session_id}."
+        }]
     }
 
 
