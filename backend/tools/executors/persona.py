@@ -51,8 +51,17 @@ def get_active_persona(args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def clear_active_persona(args: Dict[str, Any]) -> Dict[str, Any]:
-    _clear_active_persona()
-    return {"content": [{"type": "text", "text": "✅ Active persona cleared."}]}
+    from backend.tools.context import AgentContext
+
+    ctx = AgentContext.current()
+    _clear_active_persona(session_id=ctx.session_id)
+
+    return {
+        "content": [{
+            "type": "text",
+            "text": f"✅ Active persona cleared in Session {ctx.session_id}."
+        }]
+    }
 
 
 def list_personas(args: Dict[str, Any]) -> Dict[str, Any]:

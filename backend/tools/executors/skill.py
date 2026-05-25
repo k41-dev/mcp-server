@@ -96,8 +96,17 @@ def get_active_skill(args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def clear_active_skill(args: Dict[str, Any]) -> Dict[str, Any]:
-    _clear_active_skill()
-    return {"content": [{"type": "text", "text": "✅ Active skill cleared."}]}
+    from backend.tools.context import AgentContext
+
+    ctx = AgentContext.current()
+    _clear_active_skill(session_id=ctx.session_id)
+
+    return {
+        "content": [{
+            "type": "text",
+            "text": f"✅ Active skill cleared in Session {ctx.session_id}."
+        }]
+    }
 
 
 def get_skill(args: Dict[str, Any]) -> Dict[str, Any]:
