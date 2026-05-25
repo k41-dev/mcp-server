@@ -1,0 +1,10 @@
+{
+  "name": "get_active_session",
+  "description": "Gibt die aktuell aktive Session (ID + Name) zurück.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "category": "session"
+}

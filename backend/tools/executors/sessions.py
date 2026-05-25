@@ -166,3 +166,37 @@ def save_current_context(args: Dict[str, Any]) -> Dict[str, Any]:
             "content": [{"type": "text", "text": f"Error beim Speichern: {str(e)}"}],
             "isError": True
         }
+
+
+def get_active_session(args: Dict[str, Any]) -> Dict[str, Any]:
+    """Gibt die aktuell aktive Session zurück."""
+    from backend.tools.session_manager import session_manager
+    import json
+
+    try:
+        session_id = session_manager.get_current_session_id()
+        session = session_manager.get_session(session_id)
+
+        if session:
+            return {
+                "content": [{
+                    "type": "text",
+                    "text": json.dumps({
+                        "session_id": session_id,
+                        "name": session.get("name"),
+                        "last_active": session.get("last_active")
+                    })
+                }]
+            }
+        else:
+            return {
+                "content": [{
+                    "type": "text",
+                    "text": json.dumps({"session_id": session_id, "name": "Unknown"})
+                }]
+            }
+    except Exception as e:
+        return {
+            "content": [{"type": "text", "text": f"Error: {str(e)}"}],
+            "isError": True
+        }
