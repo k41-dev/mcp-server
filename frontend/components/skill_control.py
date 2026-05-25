@@ -48,6 +48,12 @@ def apply_skill(skill_name: str):
         "skill_name": skill_name
     })
 
+    # Nach dem Aktivieren Context refreshen
+    try:
+        call_mcp_tool("get_current_context", {})
+    except:
+        pass
+
     if isinstance(result, str) and ("Error" in result or "error" in result.lower()):
         return f"❌ Fehler beim Aktivieren von '{skill_name}': {result}"
 
@@ -56,16 +62,23 @@ def apply_skill(skill_name: str):
 
 def reset_skill():
     call_mcp_tool("clear_active_skill", {})
+    try:
+        call_mcp_tool("get_current_context", {})
+    except:
+        pass
     return "None"
 
 
 def load_initial_skills():
     choices = get_skill_choices()
     
-    if "None" not in [c.lower() for c in choices]:
-        choices = ["None"] + choices
+    if not choices:
+        choices = ["None"]
     else:
-        choices = ["None"] + [c for c in choices if c.lower() != "none"]
+        if "None" not in [c.lower() for c in choices]:
+            choices = ["None"] + choices
+        else:
+            choices = ["None"] + [c for c in choices if c.lower() != "none"]
     
     return gr.update(choices=choices, value="None")
 

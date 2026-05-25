@@ -34,6 +34,13 @@ def apply_persona(persona_name: str, intensity: int):
         "intensity": int(intensity)
     })
 
+    # Nach dem Setzen automatisch Status + Context refreshen
+    # (auch wenn die UI das eigentlich über Events machen sollte)
+    try:
+        call_mcp_tool("get_current_context", {})
+    except:
+        pass
+
     if isinstance(result, str) and ("Error" in result or "error" in result.lower()):
         return f"❌ Fehler beim Aktivieren von '{persona_name}': {result}"
 
@@ -42,6 +49,10 @@ def apply_persona(persona_name: str, intensity: int):
 
 def reset_persona():
     call_mcp_tool("clear_active_persona", {})
+    try:
+        call_mcp_tool("get_current_context", {})
+    except:
+        pass
     return "Default"
 
 
