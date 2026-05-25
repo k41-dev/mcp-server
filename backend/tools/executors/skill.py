@@ -35,6 +35,8 @@ def list_skills(args: Dict[str, Any]) -> Dict[str, Any]:
 
 def execute_skill(args: Dict[str, Any]) -> Dict[str, Any]:
     """Aktiviert einen Skill (empfohlener Weg)."""
+    from backend.tools.context import AgentContext
+
     skill_name = args.get("skill_name", "").strip().lower()
     if not skill_name:
         return {"content": [{"type": "text", "text": "Error: skill_name is required"}], "isError": True}
@@ -43,12 +45,22 @@ def execute_skill(args: Dict[str, Any]) -> Dict[str, Any]:
     if not content:
         return {"content": [{"type": "text", "text": f"Error: Skill '{skill_name}' not found."}], "isError": True}
 
-    _set_active_skill(skill_name, content)
-    return {"content": [{"type": "text", "text": f"✅ Skill '{skill_name}' wurde aktiviert."}]}
+    # Wichtig: Aktuelle Session verwenden
+    ctx = AgentContext.current()
+    _set_active_skill(skill_name, content, session_id=ctx.session_id)
+
+    return {
+        "content": [{
+            "type": "text",
+            "text": f"✅ Skill '{skill_name}' wurde in Session {ctx.session_id} aktiviert."
+        }]
+    }
 
 
 def set_active_skill(args: Dict[str, Any]) -> Dict[str, Any]:
     """Setzt einen aktiven Skill (Legacy/Alternative zu execute_skill)."""
+    from backend.tools.context import AgentContext
+
     skill_name = args.get("skill_name", "").strip().lower()
     content = args.get("content", "").strip()
 
@@ -60,12 +72,23 @@ def set_active_skill(args: Dict[str, Any]) -> Dict[str, Any]:
         if not content:
             return {"content": [{"type": "text", "text": f"Error: Unknown skill '{skill_name}'."}], "isError": True}
 
-    _set_active_skill(skill_name, content)
-    return {"content": [{"type": "text", "text": f"✅ Active skill set to: {skill_name}"}]}
+    # Wichtig: Aktuelle Session verwenden
+    ctx = AgentContext.current()
+    _set_active_skill(skill_name, content, session_id=ctx.session_id)
+
+    return {
+        "content": [{
+            "type": "text",
+            "text": f"✅ Active skill set to: {skill_name} in Session {ctx.session_id}"
+        }]
+    }
 
 
 def get_active_skill(args: Dict[str, Any]) -> Dict[str, Any]:
-    skill = AgentContext().active_skill
+    from backend.tools.context import AgentContext
+    import json
+
+    skill = AgentContext.current().active_skill
     if skill and isinstance(skill, dict):
         return {"content": [{"type": "text", "text": json.dumps(skill)}]}
     else:
