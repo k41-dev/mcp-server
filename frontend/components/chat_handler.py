@@ -17,33 +17,41 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # ====================== HELPER ======================
 def _get_context_line() -> str:
-    """Holt aktive Persona + Skill und baut die einheitliche Context-Line."""
+    """Holt aktive Persona + Skill + aktuelle Session und baut die Context-Line."""
     active_persona_name = "None"
     active_skill_name = "None"
+    current_session = "?"
 
     try:
+        # Aktive Session
+        session_result = call_mcp_tool("get_active_session", {})
+        try:
+            session_data = json.loads(session_result) if isinstance(session_result, str) else {}
+            current_session = session_data.get("session_id", "?")
+        except:
+            current_session = "?"
+
+        # Persona
         persona_result = call_mcp_tool("get_active_persona", {})
         if isinstance(persona_result, str) and "name" in persona_result:
-            p = json.loads(persona_result)
-            active_persona_name = p.get("name", "None")
-    except Exception:
-        pass
+            active_persona_name = json.loads(persona_result).get("name", "None")
 
-    try:
+        # Skill
         skill_result = call_mcp_tool("get_active_skill", {})
         if isinstance(skill_result, str) and "name" in skill_result:
-            s = json.loads(skill_result)
-            active_skill_name = s.get("name", "None")
+            active_skill_name = json.loads(skill_result).get("name", "None")
+
     except Exception:
         pass
 
-    context_parts = []
+    parts = []
     if active_persona_name and active_persona_name != "None":
-        context_parts.append(f"🎭 {active_persona_name}")
+        parts.append(f"🎭 {active_persona_name}")
     if active_skill_name and active_skill_name != "None":
-        context_parts.append(f"🛠️ {active_skill_name}")
+        parts.append(f"🛠️ {active_skill_name}")
+    parts.append(f"📍 Session {current_session}")
 
-    return " • ".join(context_parts) if context_parts else ""
+    return " • ".join(parts) if parts else ""
 
 
 def switch_model_provider(model_choice_value: str) -> str:
@@ -105,20 +113,26 @@ def _build_tool_status_message(model_display: str, context_line: str, tool_names
 
 
 def _prepare_messages(history: list, user_message: str, provider: str = "grok"):
-    """
-    Bereitet die Messages-Liste für den Chat vor.
-    - Holt den aktuellen dynamischen Prompt
-    - Sanitized die History
-    - Fügt den System-Prompt nur hinzu, wenn nötig (Version-Check)
-    """
     clean_history = _sanitize_history(history)
 
+    # Aktuelle Session ermitteln (über Tool)
+    try:
+        session_result = call_mcp_tool("get_active_session", {})
+        if isinstance(session_result, str):
+            session_data = json.loads(session_result)
+            current_session_id = session_data.get("session_id", 1)
+        else:
+            current_session_id = 1
+    except:
+        current_session_id = 1
+
+    # Dynamischen System-Prompt holen
     prompt_data = mcp_jsonrpc("prompts/get_dynamic", {"model": provider})
     system_prompt = prompt_data.get("prompt", "") if prompt_data else ""
     current_version = prompt_data.get("version", "v1") if prompt_data else "v1"
 
-    # Version-Check, ob System-Prompt neu mitgeschickt werden soll
-    func = _prepare_messages  # Referenz auf sich selbst für den Versions-Cache
+    # Version-Check
+    func = _prepare_messages
     if not hasattr(func, "_last_prompt_version"):
         func._last_prompt_version = None
 
@@ -153,12 +167,6 @@ def _sanitize_history(history: list) -> list:
 
 # ====================== CORE AGENT (als Generator) ======================
 def _chat_with_agent_generator(message: str, history: list, model_choice: str):
-    """
-    Generator-Version des Agenten.
-    Yieldet nach jedem Tool-Durchlauf den aktuellen History-Stand.
-    Am Ende yielded sie das finale Ergebnis.
-    """
-    from backend.tools.context import AgentContext
     tools = get_mcp_tools()
 
     # === Provider-Mapping ===
@@ -174,19 +182,24 @@ def _chat_with_agent_generator(message: str, history: list, model_choice: str):
         provider_name = "anthropic"
         model_display = os.getenv("ANTHROPIC_MODEL")
         MAX_TURNS = 5
-    else:  # Ollama (Default)
+    else:
         provider_name = "ollama"
         model_display = os.getenv("OLLAMA_MODEL")
         MAX_TURNS = 4
 
-
-    # === Wichtig: Aktuellen Context holen ===
-    ctx = AgentContext.current()
-
-    # System Prompt
-    messages, current_version = _prepare_messages(history, message, provider_name)
+    # Aktuelle Session + Context-Line holen
+    try:
+        session_result = call_mcp_tool("get_active_session", {})
+        if isinstance(session_result, str):
+            session_data = json.loads(session_result)
+            current_session_id = session_data.get("session_id", "?")
+        else:
+            current_session_id = "?"
+    except:
+        current_session_id = "?"
 
     context_line = _get_context_line()
+    messages, current_version = _prepare_messages(history, message, provider_name)
     tool_steps = []
 
     for _ in range(MAX_TURNS):
@@ -206,14 +219,8 @@ def _chat_with_agent_generator(message: str, history: list, model_choice: str):
             tool_calls = result.get("tool_calls", []) or []
 
             if tool_calls:
-                # Tool-Calls vorhanden → Messages erweitern und Tools ausführen
-                messages.append({
-                    "role": "assistant",
-                    "content": content,
-                    "tool_calls": tool_calls
-                })
+                messages.append({"role": "assistant", "content": content, "tool_calls": tool_calls})
 
-                # === Tool-Namen für die Anzeige sammeln ===
                 tool_names = []
                 for tc in tool_calls:
                     func = tc.get("function", {})
@@ -229,35 +236,22 @@ def _chat_with_agent_generator(message: str, history: list, model_choice: str):
                         tool_names.append(tool_name)
                         tool_steps.append(f"🔧 `{tool_name}`")
                         tool_result = call_mcp_tool(tool_name, args)
-                        messages.append({
-                            "role": "tool",
-                            "content": tool_result,
-                            "tool_call_id": tc.get("id", "")
-                        })
+                        messages.append({"role": "tool", "content": tool_result, "tool_call_id": tc.get("id", "")})
 
-                # === Bessere Live-Darstellung mit Aktivitäts-Indikator ===
                 current_history = history + [{"role": "user", "content": message}]
 
                 if tool_names:
-                    # === Tool-Status mit rotierendem Spinner (über Hilfsfunktion) ===
                     for i in range(12):
-                        status_msg = _build_tool_status_message(
-                            model_display=model_display,
-                            context_line=context_line,
-                            tool_names=tool_names,
-                            step_count=i
-                        )
-
+                        status_msg = _build_tool_status_message(model_display, context_line, tool_names, i)
                         yield current_history + [{"role": "assistant", "content": status_msg}]
                         import time
                         time.sleep(0.20)
                 else:
-                    status_msg = f"**{model_display}**\n*{context_line}*\n\n🔧 Verarbeite Tools ..."
-                    yield current_history + [{"role": "assistant", "content": status_msg}]
+                    yield current_history + [{"role": "assistant", "content": f"**{model_display}**\n*{context_line}*\n\n🔧 Verarbeite Tools ..."}]
 
                 continue
 
-            # === Keine Tool-Calls mehr → Finale Antwort ===
+            # Finale Antwort
             final_msg = f"**{model_display}**"
             if context_line:
                 final_msg += f"\n*{context_line}*"
@@ -268,22 +262,16 @@ def _chat_with_agent_generator(message: str, history: list, model_choice: str):
             if content:
                 call_mcp_tool("add_chat_turn", {"role": "assistant", "content": content})
 
-            # === Finale Antwort progressiv streamen ===
             base_history = history + [{"role": "user", "content": message}]
-
             for partial in _stream_final_answer(base_history, final_msg):
                 yield partial
-
             return
 
         except Exception as e:
-            error_history = history + [{"role": "user", "content": message}, {"role": "assistant", "content": f"Error: {str(e)}"}]
-            yield error_history
+            yield history + [{"role": "user", "content": message}, {"role": "assistant", "content": f"Error: {str(e)}"}]
             return
 
-    # Max turns reached
-    final_history = history + [{"role": "user", "content": message}, {"role": "assistant", "content": "Max tool turns reached."}]
-    yield final_history
+    yield history + [{"role": "user", "content": message}, {"role": "assistant", "content": "Max tool turns reached."}]
 
 
 # ====================== WRAPPER (für Backward-Compatibility) ======================
@@ -412,23 +400,24 @@ def chat_with_agent_streaming(message: str, history: list, model_choice: str):
 def get_status(model_choice_value: str = "Grok"):
     """Liefert den aktuellen Status für die Top-Status-Bar zurück."""
     try:
+        # Aktive Session holen
+        session_result = call_mcp_tool("get_active_session", {})
+        try:
+            session_data = json.loads(session_result) if isinstance(session_result, str) else {}
+            current_session_id = session_data.get("session_id", 1)
+            session_name = session_data.get("name", "default")
+        except:
+            current_session_id = 1
+            session_name = "default"
+
         # Tools zählen
         try:
             tools = get_mcp_tools()
             tool_count = len(tools) if tools else 0
-        except Exception:
+        except:
             tool_count = 0
 
-        # === Erweitertes Provider-Mapping ===
-        model_map = {
-            "xAI": "xai",
-            "OpenAI": "openai",
-            "Anthropic": "anthropic",
-            "Ollama": "ollama"
-        }
-        model_for_prompt = model_map.get(model_choice_value, "xai")
-
-        # Active Persona & Skill holen
+        # Aktive Persona & Skill holen (bleibt wie bisher)
         persona_name = "None"
         skill_name = "None"
 
@@ -436,37 +425,40 @@ def get_status(model_choice_value: str = "Grok"):
             persona_result = call_mcp_tool("get_active_persona", {})
             if isinstance(persona_result, str) and "name" in persona_result:
                 persona_name = json.loads(persona_result).get("name", "None")
-        except Exception:
+        except:
             persona_name = "Error"
 
         try:
             skill_result = call_mcp_tool("get_active_skill", {})
             if isinstance(skill_result, str) and "name" in skill_result:
                 skill_name = json.loads(skill_result).get("name", "None")
-        except Exception:
+        except:
             skill_name = "Error"
 
-        # Aktuelle Prompt-Version holen
+        # Prompt Version
         try:
+            model_map = {"xAI": "xai", "OpenAI": "openai", "Anthropic": "anthropic", "Ollama": "ollama"}
+            model_for_prompt = model_map.get(model_choice_value, "xai")
             prompt_data = mcp_jsonrpc("prompts/get_dynamic", {"model": model_for_prompt})
             version = prompt_data.get("version", "unknown") if prompt_data else "unknown"
-        except Exception:
+        except:
             version = "error"
 
         return (
             f"✅ Connected • {tool_count} tools",
             f"📜 Prompt: {version}",
             f"🎭 Persona: {persona_name}",
-            f"🛠️ Skill: {skill_name}"
+            f"🛠️ Skill: {skill_name}",
+            f"📍 Session: {current_session_id} ({session_name})"
         )
 
     except Exception as e:
-        # Fallback bei komplettem Fehler
         return (
             f"❌ Error: {str(e)}",
             "📜 Prompt: error",
             "🎭 Persona: error",
-            "🛠️ Skill: error"
+            "🛠️ Skill: error",
+            "📍 Session: error"
         )
 
 
@@ -489,31 +481,20 @@ def refresh_ui_state(model_choice_value: str = "Grok"):
     
 
 def respond(user_message, chat_history, model):
-    """
-    Zentrale Einstiegsfunktion für den Hybrid-Chat.
-    - Zeigt User-Message sofort an
-    - Führt Tool-fähigen Agenten aus (inkl. Spinner + finales Streaming)
-    - Gibt Fehler sauber zurück
-    """
-    
     if not user_message or not user_message.strip():
         return chat_history, ""
 
     try:
-        # 1. User-Message persistieren
         call_mcp_tool("add_chat_turn", {"role": "user", "content": user_message})
 
-        # 2. User-Message sofort sichtbar machen
         temp_history = chat_history + [{"role": "user", "content": user_message}]
         yield temp_history, ""
 
-        # 3. Generator ausführen und Ergebnisse durchreichen
         final_history = None
         for partial_history in _chat_with_agent_generator(user_message, chat_history, model):
             final_history = partial_history
             yield partial_history, ""
 
-        # 4. Fallback, falls Generator nichts zurückgegeben hat
         if final_history is None:
             yield temp_history, ""
             return temp_history, ""
@@ -523,7 +504,7 @@ def respond(user_message, chat_history, model):
     except Exception as e:
         error_history = (chat_history or []) + [
             {"role": "user", "content": user_message},
-            {"role": "assistant", "content": f"❌ Fehler im Hybrid-Modus: {str(e)}"}
+            {"role": "assistant", "content": f"❌ Fehler: {str(e)}"}
         ]
         yield error_history, ""
         return error_history, ""
