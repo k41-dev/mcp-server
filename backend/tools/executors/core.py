@@ -70,7 +70,7 @@ def get_server_info(args: Dict[str, Any]) -> Dict[str, Any]:
     import datetime
 
     try:
-        ctx = AgentContext()
+        ctx = AgentContext.current()
         tools_count = len(registry.get_all_definitions())
 
         # Prompt Version ermitteln
@@ -155,7 +155,7 @@ def get_prompt_status(args: Dict[str, Any]) -> Dict[str, Any]:
     from backend.tools.registry import registry
 
     try:
-        ctx = AgentContext()                    # Default Session
+        ctx = AgentContext.current()                    # Default Session
         tools_count = len(registry.get_all_definitions())
 
         # Version berechnen
@@ -207,10 +207,9 @@ def get_current_context(args: Dict[str, Any]) -> Dict[str, Any]:
     import datetime
 
     try:
-        ctx = AgentContext()                    # Default Session
+        ctx = AgentContext.current()          # ← Wichtig! Jetzt korrekt
         tools_count = len(registry.get_all_definitions())
 
-        # Prompt-Version ermitteln
         version = "dynamic-v1"
         try:
             from backend.prompt_builder import get_prompt_version_only
@@ -223,7 +222,6 @@ def get_current_context(args: Dict[str, Any]) -> Dict[str, Any]:
         except Exception:
             pass
 
-        # Reichen Kontext aufbauen
         context_data = ctx.to_dict()
         context_data.update({
             "prompt_version": version,
