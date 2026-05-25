@@ -105,19 +105,20 @@ def _build_tool_status_message(model_display: str, context_line: str, tool_names
 
 
 def _prepare_messages(history: list, user_message: str, provider: str = "grok"):
-    from backend.tools.context import AgentContext
-
+    """
+    Bereitet die Messages-Liste für den Chat vor.
+    - Holt den aktuellen dynamischen Prompt
+    - Sanitized die History
+    - Fügt den System-Prompt nur hinzu, wenn nötig (Version-Check)
+    """
     clean_history = _sanitize_history(history)
-
-    # === Aktuellen Context holen ===
-    ctx = AgentContext.current()
 
     prompt_data = mcp_jsonrpc("prompts/get_dynamic", {"model": provider})
     system_prompt = prompt_data.get("prompt", "") if prompt_data else ""
     current_version = prompt_data.get("version", "v1") if prompt_data else "v1"
 
     # Version-Check, ob System-Prompt neu mitgeschickt werden soll
-    func = _prepare_messages
+    func = _prepare_messages  # Referenz auf sich selbst für den Versions-Cache
     if not hasattr(func, "_last_prompt_version"):
         func._last_prompt_version = None
 
@@ -494,13 +495,11 @@ def respond(user_message, chat_history, model):
     - Führt Tool-fähigen Agenten aus (inkl. Spinner + finales Streaming)
     - Gibt Fehler sauber zurück
     """
-    from backend.tools.context import AgentContext
-
+    
     if not user_message or not user_message.strip():
         return chat_history, ""
 
     try:
-        ctx = AgentContext.current()
         # 1. User-Message persistieren
         call_mcp_tool("add_chat_turn", {"role": "user", "content": user_message})
 
