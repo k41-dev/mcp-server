@@ -33,6 +33,7 @@ from components.event_wiring import (
     wire_memory_panel,
     wire_chat_events,
     wire_initial_demo_loads,
+    wire_sessions_panel,
 )
 
 from components.tools_panel import get_tool_names
