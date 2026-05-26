@@ -127,7 +127,7 @@ mcp-agent-platform/
 - Computes stable version hash (`persona|skill|tools_count|model`)
 - Automatic cache invalidation via Event Bus on state changes
 
-### 3. Tool System (32+ Tools)
+### 3. Tool System (42 Tools)
 All tools are defined in `backend/tools/definitions/{category}/*.json` and implemented in `executors/`.
 
 **Categories:**
