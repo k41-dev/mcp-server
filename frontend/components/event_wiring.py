@@ -302,6 +302,14 @@ def wire_initial_demo_loads(
 
     def on_model_change(model_choice_value: str):
         switch_model_provider(model_choice_value)
+
+        # Nach dem Setzen des Providers auch den aktuellen Context in die Session speichern,
+        # damit zukünftige Session-Wechsel den Provider mitnehmen.
+        try:
+            call_mcp_tool("save_current_context", {})
+        except:
+            pass
+
         return refresh_after_state_change(model_choice_value)
 
     # Model-Wechsel: Zentrale Funktion statt .then()-Kette
