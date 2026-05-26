@@ -213,16 +213,10 @@ async def mcp_handler(
                 for t in reg.get_all_definitions()
             ]
 
-            # === Dependency Injection (jetzt sauber) ===
-            try:
-                active_persona = ctx.active_persona if ctx else None
-                active_skill = ctx.active_skill if ctx else None
-                active_model = ctx.active_model if ctx else None
-            except Exception as e:
-                logger.error(f"Error getting context via dependency: {e}")
-                active_persona = None
-                active_skill = None
-                active_model = None
+            # Context kommt zuverlässig aus der Dependency (AgentContext.current())
+            active_persona = getattr(ctx, "active_persona", None)
+            active_skill   = getattr(ctx, "active_skill", None)
+            active_model   = getattr(ctx, "active_model", None)
 
             effective_model = requested_model or active_model
 
@@ -236,6 +230,7 @@ async def mcp_handler(
             except Exception as e:
                 logger.error(f"Error building dynamic prompt: {e}")
                 result = {"prompt": "Error building prompt", "version": "error"}
+                
         elif method == "models/chat":
             from backend.providers import get_provider
             provider_name = (params or {}).get("provider") or (params or {}).get("model", "xai")
