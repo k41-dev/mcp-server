@@ -36,6 +36,11 @@ def set_active_persona(
         "intensity": intensity,
         "session_id": session_id
     })
+    try:
+        from backend.prompt_cache import clear_cache
+        clear_cache()
+    except:
+        pass
 
 
 def get_active_persona(session_id: int = DEFAULT_SESSION_ID) -> Optional[Dict[str, Any]]:
@@ -65,6 +70,11 @@ def set_active_skill(
         "skill_name": skill_name.lower().strip(),
         "session_id": session_id
     })
+    try:
+        from backend.prompt_cache import clear_cache
+        clear_cache()
+    except:
+        pass
 
 
 def get_active_skill(session_id: int = DEFAULT_SESSION_ID) -> Optional[Dict[str, Any]]:
