@@ -9,17 +9,10 @@ Kein Backend-Import, keine toten Imports, keine Redundanzen.
 
 import gradio as gr
 
+# === Zentrale Refresh-Funktion ===
+from .chat_handler import refresh_ui_state, respond, switch_model_provider
+
 # === Handler Imports ===
-from components.prompt_viewer import get_system_prompt
-from .chat_handler import refresh_ui_state
-
-from components.chat_handler import (
-    respond, 
-    get_status, 
-    refresh_ui_state, 
-    switch_model_provider
-)
-
 from components.persona_control import (
     apply_persona,
     reset_persona,
