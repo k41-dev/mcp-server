@@ -398,37 +398,53 @@ def chat_with_agent_streaming(message: str, history: list, model_choice: str):
 
 # ====================== STATUS & REFRESH ======================
 def get_status(model_choice_value: str = "xAI"):
-    """Liefert den aktuellen Status für die Top-Status-Bar zurück (robuster)."""
-    from backend.tools.context import AgentContext
-
+    """Liefert den aktuellen Status für die Top-Status-Bar zurück (robuste Version)."""
     try:
-        ctx = AgentContext.current()
+        # === Persona ===
+        persona_result = call_mcp_tool("get_active_persona", {})
+        persona_name = "None"
+        if isinstance(persona_result, str):
+            try:
+                data = json.loads(persona_result)
+                if isinstance(data, dict) and "name" in data:
+                    persona_name = data.get("name", "None")
+            except:
+                pass
 
-        # Tools zählen
+        # === Skill ===
+        skill_result = call_mcp_tool("get_active_skill", {})
+        skill_name = "None"
+        if isinstance(skill_result, str):
+            try:
+                data = json.loads(skill_result)
+                if isinstance(data, dict) and "name" in data:
+                    skill_name = data.get("name", "None")
+            except:
+                pass
+
+        # === Provider (mit Fallback) ===
+        provider_result = call_mcp_tool("get_active_provider", {})
+        provider = "xai"
+        if isinstance(provider_result, str):
+            try:
+                data = json.loads(provider_result)
+                if isinstance(data, dict):
+                    provider = data.get("active_provider", "xai")
+            except:
+                pass
+
+        # === Prompt Version ===
+        model_map = {"xAI": "xai", "OpenAI": "openai", "Anthropic": "anthropic", "Ollama": "ollama"}
+        model_for_prompt = model_map.get(model_choice_value, "xai")
+        prompt_data = mcp_jsonrpc("prompts/get_dynamic", {"model": model_for_prompt})
+        version = prompt_data.get("version", "unknown") if prompt_data else "unknown"
+
+        # === Tool Count ===
         try:
             tools = get_mcp_tools()
             tool_count = len(tools) if tools else 0
         except:
             tool_count = 0
-
-        # Persona & Skill direkt aus dem aktuellen Context holen
-        persona = ctx.active_persona or {}
-        skill = ctx.active_skill or {}
-
-        persona_name = persona.get("name", "None") if persona else "None"
-        skill_name = skill.get("name", "None") if skill else "None"
-
-        # Prompt Version frisch holen
-        try:
-            model_map = {"xAI": "xai", "OpenAI": "openai", "Anthropic": "anthropic", "Ollama": "ollama"}
-            model_for_prompt = model_map.get(model_choice_value, "xai")
-            prompt_data = mcp_jsonrpc("prompts/get_dynamic", {"model": model_for_prompt})
-            version = prompt_data.get("version", "unknown") if prompt_data else "unknown"
-        except:
-            version = "error"
-
-        # Provider mit Fallback
-        provider = ctx.provider or "xai"
 
         return (
             f"✅ Connected • {tool_count} tools",
