@@ -248,6 +248,7 @@ def wire_initial_demo_loads(
     prompt_version,
     active_persona,
     active_skill,
+    current_session,
     system_prompt_box,
     model_choice,
     persona_dropdown,
@@ -269,6 +270,7 @@ def wire_initial_demo_loads(
             active_persona,
             active_skill,
             current_session,
+            model_choice,           # ← hinzugefügt
             system_prompt_box
         ]
     )
@@ -290,6 +292,7 @@ def wire_initial_demo_loads(
             active_persona,
             active_skill,
             current_session,
+            model_choice,           # ← hinzugefügt
             system_prompt_box
         ]
     )

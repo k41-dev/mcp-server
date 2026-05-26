@@ -46,7 +46,7 @@ def create_ui():
         gr.Markdown("# Wäärkzüüg-Chaschte 🧰")
 
         # ========== TOP STATUS BAR ==========
-        conn_status, prompt_version, active_persona, active_skill, model_choice = create_status_bar()
+        conn_status, prompt_version, active_persona, active_skill, current_session, model_choice = create_status_bar()
 
         # ========== TWO COLUMN LAYOUT ==========
         with gr.Row(elem_classes=["main-layout"]):
@@ -142,6 +142,7 @@ def create_ui():
             prompt_version=prompt_version,
             active_persona=active_persona,
             active_skill=active_skill,
+            current_session=current_session,
             system_prompt_box=system_prompt_box,
             model_choice=model_choice,
             persona_dropdown=persona_dropdown,

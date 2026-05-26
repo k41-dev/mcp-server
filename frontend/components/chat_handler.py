@@ -454,9 +454,10 @@ def refresh_all(model_choice_value: str):
     return get_status(model_choice_value)
 
 
-def refresh_ui_state(model_choice_value: str = "Grok"):
+def refresh_ui_state(model_choice_value: str = "xAI"):
     status = get_status(model_choice_value)
-    # Session separat holen
+
+    # Session
     try:
         session_result = call_mcp_tool("get_active_session", {})
         if isinstance(session_result, str):
@@ -467,8 +468,26 @@ def refresh_ui_state(model_choice_value: str = "Grok"):
     except:
         session_text = "📍 Session: error"
 
-    return (*status, session_text)
-    
+    # System Prompt
+    try:
+        prompt_text = get_system_prompt(model_choice_value)
+    except:
+        prompt_text = "❌ Konnte Prompt nicht laden"
+
+    # WICHTIG: Beim ersten Laden (wenn model_choice_value leer ist) geben wir gr.NO_UPDATE zurück
+    # damit das Radio seinen eigenen Default-Wert ("xAI") behält.
+    model_value = model_choice_value if model_choice_value else gr.NO_UPDATE
+
+    return (
+        status[0],           # conn
+        status[1],           # prompt version
+        status[2],           # persona
+        status[3],           # skill
+        session_text,        # current_session
+        model_value,         # model_choice Radio
+        prompt_text          # system_prompt_box
+    )
+
 
 def respond(user_message, chat_history, model):
     if not user_message or not user_message.strip():

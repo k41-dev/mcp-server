@@ -54,4 +54,5 @@ def create_status_bar() -> Tuple[gr.Textbox, gr.Textbox, gr.Textbox, gr.Textbox,
             scale=1.5
         )
 
-    return conn_status, prompt_version, active_persona, active_skill, model_choice, current_session
+    # In create_status_bar() am Ende:
+    return conn_status, prompt_version, active_persona, active_skill, current_session, model_choice
