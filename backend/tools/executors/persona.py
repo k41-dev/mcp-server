@@ -43,7 +43,7 @@ def set_active_persona(args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def get_active_persona(args: Dict[str, Any]) -> Dict[str, Any]:
-    persona = AgentContext().active_persona
+    persona = AgentContext.current().active_persona
     if persona and isinstance(persona, dict):
         return {"content": [{"type": "text", "text": json.dumps(persona)}]}
     else:
