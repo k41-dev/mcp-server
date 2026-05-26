@@ -150,23 +150,33 @@ class AgentContext:
 
         context = session_data.get("context", {})
 
-        # Alten Context zurücksetzen
         clear_active_persona(session_id=self.session_id)
         clear_active_skill(session_id=self.session_id)
-        clear_active_provider(session_id=self.session_id)
 
-        # Neuen Context laden
+        # Provider nur clearen + wiederherstellen, wenn er in der Session gespeichert war.
+        # Sonst den aktuell im UI gewählten Provider behalten.
+        if "provider" in context:
+            clear_active_provider(session_id=self.session_id)
+            if context.get("provider"):
+                set_active_provider(context["provider"], session_id=session_id)
+            # Falls kein Provider in der Session gespeichert war → nichts tun (UI-Provider bleibt erhalten)
+
         if context.get("persona"):
             p = context["persona"]
-            set_active_persona(p.get("name", ""), p.get("instructions", ""), 
-                            p.get("intensity", 7), session_id=session_id)
+            set_active_persona(
+                p.get("name", ""), 
+                p.get("instructions", ""), 
+                p.get("intensity", 7), 
+                session_id=session_id
+            )
 
         if context.get("skill"):
             s = context["skill"]
-            set_active_skill(s.get("name", ""), s.get("content", ""), session_id=session_id)
-
-        if context.get("provider"):
-            set_active_provider(context["provider"], session_id=session_id)
+            set_active_skill(
+                s.get("name", ""), 
+                s.get("content", ""), 
+                session_id=session_id
+            )
 
         # Wichtig: Session wechseln + global als aktiv markieren
         self.session_id = session_id
