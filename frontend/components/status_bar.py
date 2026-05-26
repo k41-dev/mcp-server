@@ -40,6 +40,12 @@ def create_status_bar() -> Tuple[gr.Textbox, gr.Textbox, gr.Textbox, gr.Textbox,
             interactive=False,
             scale=2
         )
+        current_session = gr.Textbox(
+            value="📍 Session: 1 (default)",
+            label="Current Session",
+            interactive=False,
+            scale=1.8
+        )
         model_choice = gr.Radio(
             ["xAI", "OpenAI", "Anthropic", "Ollama"],
             value="xAI",
@@ -48,4 +54,4 @@ def create_status_bar() -> Tuple[gr.Textbox, gr.Textbox, gr.Textbox, gr.Textbox,
             scale=1.5
         )
 
-    return conn_status, prompt_version, active_persona, active_skill, model_choice
+    return conn_status, prompt_version, active_persona, active_skill, model_choice, current_session

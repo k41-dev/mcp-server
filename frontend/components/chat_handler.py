@@ -455,17 +455,19 @@ def refresh_all(model_choice_value: str):
 
 
 def refresh_ui_state(model_choice_value: str = "Grok"):
-    """
-    Zentrale Single-Source-of-Truth Funktion zum Aktualisieren
-    von Status-Bar UND System Prompt Viewer nach Model-Wechsel
-    oder Initial Load.
-
-    Reduziert Redundanz in den Event-Wirings und verhindert
-    Desync zwischen Prompt-Version (Status-Bar) und Prompt-Inhalt (Viewer).
-    """
     status = get_status(model_choice_value)
-    prompt_text = get_system_prompt(model_choice_value)
-    return (*status, prompt_text)
+    # Session separat holen
+    try:
+        session_result = call_mcp_tool("get_active_session", {})
+        if isinstance(session_result, str):
+            session_data = json.loads(session_result)
+            session_text = f"📍 Session: {session_data.get('session_id', '?')} ({session_data.get('name', 'default')})"
+        else:
+            session_text = "📍 Session: ?"
+    except:
+        session_text = "📍 Session: error"
+
+    return (*status, session_text)
     
 
 def respond(user_message, chat_history, model):

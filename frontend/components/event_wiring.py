@@ -268,6 +268,7 @@ def wire_initial_demo_loads(
             prompt_version,
             active_persona,
             active_skill,
+            current_session,
             system_prompt_box
         ]
     )
@@ -288,6 +289,7 @@ def wire_initial_demo_loads(
             prompt_version,
             active_persona,
             active_skill,
+            current_session,
             system_prompt_box
         ]
     )
