@@ -142,6 +142,7 @@ class AgentContext:
         from backend.tools.state import (
             set_active_persona, set_active_skill, set_active_provider,
             clear_active_persona, clear_active_skill, clear_active_provider,
+            get_active_provider as _get_active_provider,
         )
 
         session_data = session_manager.get_session(session_id)
@@ -150,17 +151,28 @@ class AgentContext:
 
         context = session_data.get("context", {}) or {}
 
+        # Merke den aktuell aktiven Provider, bevor wir clearen
+        current_provider = _get_active_provider(session_id=self.session_id)
+
         clear_active_persona(session_id=self.session_id)
         clear_active_skill(session_id=self.session_id)
+        clear_active_provider(session_id=self.session_id)
 
-        # === Provider (defensiv & robust) ===
+        # === Provider ===
         saved_provider = context.get("provider") if isinstance(context, dict) else None
 
-        if saved_provider:   # Nur clearen + setzen, wenn wirklich ein Provider gespeichert war
-            clear_active_provider(session_id=self.session_id)
+        if saved_provider:
+            # Es gibt einen gespeicherten Provider → diesen wiederherstellen
             set_active_provider(saved_provider, session_id=session_id)
-        # Wenn kein Provider in der Session gespeichert war → aktuellen UI-Provider behalten
+        else:
+            # Kein Provider in der Session gespeichert → den vorherigen beibehalten
+            if current_provider:
+                set_active_provider(current_provider, session_id=session_id)
+            else:
+                # Fallback auf Default (sollte eigentlich nie nötig sein)
+                set_active_provider("xai", session_id=session_id)
 
+        # Persona & Skill wie bisher
         if context.get("persona"):
             p = context["persona"]
             set_active_persona(
@@ -178,16 +190,15 @@ class AgentContext:
                 session_id=session_id
             )
 
-        # Session wechseln
         self.session_id = session_id
         session_manager.set_current_session_id(session_id)
 
         try:
             from backend.prompt_cache import clear_cache
             clear_cache()
-        except:
+        except Exception:
             pass
-
+            
         return True
 
 

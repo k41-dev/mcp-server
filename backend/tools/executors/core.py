@@ -210,15 +210,13 @@ def get_current_context(args: Dict[str, Any]) -> Dict[str, Any]:
         ctx = AgentContext.current()
         tools_count = len(registry.get_all_definitions())
 
-        version = "dynamic-v1"
+        version = "unknown"
         try:
-            from backend.prompt_builder import get_prompt_version_only
-            version = get_prompt_version_only(
-                active_persona=ctx.active_persona,
-                active_skill=ctx.active_skill,
-                tools_count=tools_count,
-                model=ctx.active_model
-            )
+            from backend.tools.context import AgentContext
+            model_for_prompt = ctx.active_model or "grok-4.3"
+            
+            prompt_data = mcp_jsonrpc("prompts/get_dynamic", {"model": model_for_prompt})
+            version = prompt_data.get("version", "unknown") if prompt_data else "unknown"
         except Exception:
             pass
 
@@ -253,7 +251,7 @@ def get_current_context(args: Dict[str, Any]) -> Dict[str, Any]:
             }],
             "isError": True
         }
-        
+
 
 def list_executors(args: Dict[str, Any]) -> Dict[str, Any]:
     """Gibt alle dynamisch entdeckten Executor-Funktionen zurück."""
