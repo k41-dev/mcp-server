@@ -33,6 +33,27 @@ MCP_PUBLIC_URL=http://localhost:8321
 
 ---
 
+## INFO - IMPORTANT
+
+So basically you have to create new sessions with the corresponding tool atm.
+Memory, Persona, Skill and Provider are part of the AgentContext, so we have session-specific
+stats and could setup sessions with distict settings. Also, when switching a session,
+the Context is saved, so you can switch everything in the session and then move to another.
+
+The 42 tools are a foundation and this platform can test those. you can write a new executor,
+set new definitions in the directory and everything is loaded automatic through the registry.
+
+I plan to implement better UI-feeling. UI uses mcp-calls mostly, so you have a strict architecture,
+separating the backend from the frontend.
+
+Also session-creation and displaying multiple sessions, having an agent run longer, is planned.
+Anthropic and OpenAI, aswell the normal cli client might not work yet, since I just did a 
+simple implementation and no tweaks (I have no api-keys for that). But ollama and grok
+just work fine for me atm. Anthropic has a different SDK, so this might take a bit.
+
+All code was vibecoded with the grok-4.3 model, I just asked the Expert sometimes, when we had
+to get a different opinion on certain things.
+
 ## Quick Start (Recommended)
 
 ```bash
