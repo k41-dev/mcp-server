@@ -13,7 +13,6 @@ from typing import List, Dict, Any, Optional
 import numpy as np
 import logging
 
-
 logger = logging.getLogger("mcp.memory")
 
 try:
@@ -31,7 +30,6 @@ DB_PATH = DATA_DIR / "chat_memory.db"
 
 # ====================== OLLAMA CONFIG (smart host detection) ======================
 import socket
-
 
 def _detect_ollama_url() -> str:
     """Choose correct Ollama URL depending on environment.
@@ -294,39 +292,49 @@ def list_all_memories(session_id: int) -> List[Dict[str, Any]]:
     return recall_memories(session_id, query="", limit=50)
 
 
-def clear_long_term_memory():
-    """Clears only long-term semantic memory (facts & preferences).
-    Does NOT touch conversation history."""
+def clear_long_term_memory(session_id: Optional[int] = None):
+    """Clears long-term memory. 
+    If session_id is given → only this session. 
+    If None → global (used by full_reset)."""
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute("DELETE FROM long_term_memories")
+
+    if session_id is not None:
+        cur.execute("DELETE FROM long_term_memories WHERE session_id = ?", (session_id,))
+    else:
+        cur.execute("DELETE FROM long_term_memories")
+
     conn.commit()
     conn.close()
-    logger.warning("🗑️ Long-term Memory wurde geleert!")
-    print("🗑️ Long-term memory cleared (facts & preferences wiped).")
+    logger.warning("🗑️ Long-term Memory wurde geleert!" + (f" (Session {session_id})" if session_id else " (global)"))
 
 
-def clear_chat_history():
-    """Clears ONLY conversation history using DROP + CREATE (most reliable method).
-    Does NOT touch long-term memory."""
+def clear_chat_history(session_id: Optional[int] = None):
+    """Clears chat history.
+    If session_id is given → only this session (DELETE).
+    If None → nuclear (DROP TABLE) – only for full_reset."""
     conn = get_db_connection()
     cur = conn.cursor()
-    
-    cur.execute("DROP TABLE IF EXISTS messages")
-    cur.execute("""
-        CREATE TABLE messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            session_id INTEGER NOT NULL,
-            role TEXT NOT NULL,
-            content TEXT NOT NULL,
-            timestamp TEXT NOT NULL,
-            FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
-        )
-    """)
+
+    if session_id is not None:
+        cur.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
+    else:
+        # Nuclear path (full_reset)
+        cur.execute("DROP TABLE IF EXISTS messages")
+        cur.execute("""
+            CREATE TABLE messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id INTEGER NOT NULL,
+                role TEXT NOT NULL,
+                content TEXT NOT NULL,
+                timestamp TEXT NOT NULL,
+                FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+            )
+        """)
+
     conn.commit()
     conn.close()
-    logger.warning("🗑️ Chat History wurde geleert!")
-    print("🗑️ Chat history cleared (conversation turns wiped).")
+    logger.warning("🗑️ Chat History wurde geleert!" + (f" (Session {session_id})" if session_id else " (global)"))
 
 
 def full_reset():
