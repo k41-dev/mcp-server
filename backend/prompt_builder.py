@@ -171,10 +171,6 @@ def build_dynamic_system_prompt(
     )
 
     model_family_for_log = _get_model_family(effective_model)
-    if model_family_for_log == "ollama":
-        p_name_for_log = active_persona.get("name") if active_persona else "none"
-        s_name_for_log = active_skill.get("name") if active_skill else "none"
-        logger.info(f"[OLLAMA DEBUG] version inputs → family={model_family_for_log} | persona={p_name_for_log} | skill={s_name_for_log} | tools_count={len(tools)} | computed_version={version}")
 
     # === Cache Check ===
     cached = get_cached_prompt(version)

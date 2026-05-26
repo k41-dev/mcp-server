@@ -66,65 +66,55 @@ def get_server_info(args: Dict[str, Any]) -> Dict[str, Any]:
     """Returns basic server metadata and status including current AgentContext (pretty formatted)."""
     from backend.tools.registry import registry
     from backend.tools.context import AgentContext
+    from backend.prompt_builder import get_prompt_version_only
     from backend.tools import loader
     import datetime
+    from collections import defaultdict
 
     try:
         ctx = AgentContext.current()
         tools_count = len(registry.get_all_definitions())
-
-        # Prompt Version ermitteln
-        prompt_version = "dynamic-v1"
-        try:
-            from backend.prompt_builder import get_prompt_version_only
-            prompt_version = get_prompt_version_only(
-                active_persona=ctx.active_persona,
-                active_skill=ctx.active_skill,
-                tools_count=tools_count,
-                model=None
-            )
-        except Exception:
-            pass
-
-        # Kontext-Informationen
-        persona = ctx.get_active_names()["persona"] or "None"
-        skill = ctx.get_active_names()["skill"] or "None"
-        summary = ctx.get_context_summary()
-
         executors_count = len(loader.get_all_executors())
 
-        # === Neue Integrity-Prüfung ===
+        # === Saubere Prompt-Version (einheitlich mit get_current_context) ===
+        version = get_prompt_version_only(
+            active_persona=ctx.active_persona,
+            active_skill=ctx.active_skill,
+            tools_count=tools_count,
+            model=ctx.active_model
+        )
+
+        # === Integrity Check ===
         integrity = loader.get_integrity_report(
             set(t.name for t in registry.get_all_definitions())
         )
         integrity_status = "✅ healthy" if integrity["healthy"] else "⚠️ issues found"
 
         # === Tools nach Kategorie gruppieren ===
-        from collections import defaultdict
         tools_by_category: dict[str, list[str]] = defaultdict(list)
-
         for tool in registry.get_all_definitions():
             cat = getattr(tool, "category", "core") or "core"
             tools_by_category[cat].append(tool.name)
 
-        # Schöne Kategorien-Übersicht bauen
-        category_lines = []
-        for category in sorted(tools_by_category.keys()):
-            names = ", ".join(sorted(tools_by_category[category]))
-            category_lines.append(f"• {category}: {names} ({len(tools_by_category[category])})")
-
+        category_lines = [
+            f"• {category}: {', '.join(sorted(names))} ({len(names)})"
+            for category, names in sorted(tools_by_category.items())
+        ]
         tools_overview = "\n".join(category_lines)
 
-        # Schöne Text-Ausgabe
+        persona_name = ctx.get_active_names().get("persona") or "None"
+        skill_name = ctx.get_active_names().get("skill") or "None"
+        summary = ctx.get_context_summary()
+
         output = f"""Status: running
 
 * Version: 1.0.0
 * Tools Loaded: {tools_count}
 * Executors Discovered: {executors_count}
 * Integrity: {integrity_status}
-* Prompt Version: {prompt_version}
+* Prompt Version: {version}
 * Timestamp: {datetime.datetime.utcnow().isoformat() + "Z"}
-* Context: active_persona = "{persona}", active_skill = "{skill}", context_summary = "{summary}"
+* Context: active_persona = "{persona_name}", active_skill = "{skill_name}", context_summary = "{summary}"
 
 **Tools by Category:**
 {tools_overview}
