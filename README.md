@@ -1,5 +1,42 @@
 # Wäärkzüüg-Chaschte 🧰
 
+## Prerequisites
+
+Before starting the MCP Agent Platform, make sure the following tools are installed:
+
+### 1. uv (recommended Python package manager)
+
+`uv` is used for fast dependency management and running Python scripts in this project.
+
+```bash
+# Install uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Verify installation
+uv --version
+Alternative installation via pip:
+
+pip install uv
+
+2. Docker & Docker Compose
+Install Docker Desktop (recommended for most users) or Docker Engine + Docker Compose plugin.
+Verify your installation:
+
+docker --version
+docker compose version
+
+3. Create the required Docker network
+The project uses an external Docker network named app-net for inter-container communication with static IPs. This network must be created manually before the first startup:
+docker network create app-net
+
+Verify it was created:
+docker network ls | grep app-net
+
+Once these steps are complete, you can start the project with:
+docker compose up --build -d
+
+
+
 **Production-grade autonomous agent server** with JSON-RPC MCP endpoint, persistent vector memory, dynamic persona/skill injection, and dual-model support (Grok + Ollama).
 
 Built and maintained under strict architectural discipline for long-term stability, zero-surprise deployments, and clean separation of concerns.
