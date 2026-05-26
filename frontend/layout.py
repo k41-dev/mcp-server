@@ -75,6 +75,7 @@ def create_ui():
                     prompt_version=prompt_version,
                     active_persona=active_persona,
                     active_skill=active_skill,
+                    current_session=current_session,     # ← neu hinzugefügt
                 )
 
                 # === Skill Control ===
@@ -91,6 +92,7 @@ def create_ui():
                     prompt_version=prompt_version,
                     active_persona=active_persona,
                     active_skill=active_skill,
+                    current_session=current_session,     # ← neu hinzugefügt
                 )
 
                 # === Tools Panel ===
@@ -133,6 +135,7 @@ def create_ui():
             active_persona=active_persona,
             active_skill=active_skill,
             system_prompt_box=system_prompt_box,
+            current_session=current_session,     # ← neu hinzugefügt
         )
 
         # ====================== INITIAL LOAD & MODEL CHANGE ======================

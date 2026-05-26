@@ -63,6 +63,7 @@ def wire_persona_controls(
     prompt_version,
     active_persona,
     active_skill,
+    current_session,          # ← neu hinzugefügt
 ):
     """Verdrahtet alle Persona-Controls."""
     apply_btn.click(
@@ -118,6 +119,7 @@ def wire_skill_controls(
     prompt_version,
     active_persona,
     active_skill,
+    current_session,          # ← neu hinzugefügt
 ):
     """Verdrahtet alle Skill-Controls."""
     apply_skill_btn.click(
@@ -224,7 +226,8 @@ def wire_chat_events(
     prompt_version,
     active_persona,
     active_skill,
-    system_prompt_box,          # ← neu
+    system_prompt_box,
+    current_session,          # ← neu hinzugefügt
 ):
     """Verdrahtet Chat-Events (Send-Button + Enter).
 
@@ -236,13 +239,15 @@ def wire_chat_events(
         [msg, chatbot, model_choice],
         [chatbot, msg]
     ).then(
-        refresh_ui_state,
+        refresh_after_state_change,
         inputs=[model_choice],
         outputs=[
             conn_status,
             prompt_version,
             active_persona,
             active_skill,
+            current_session,
+            model_choice,
             system_prompt_box
         ]
     )
@@ -252,13 +257,15 @@ def wire_chat_events(
         [msg, chatbot, model_choice],
         [chatbot, msg]
     ).then(
-        refresh_ui_state,
+        refresh_after_state_change,
         inputs=[model_choice],
         outputs=[
             conn_status,
             prompt_version,
             active_persona,
             active_skill,
+            current_session,
+            model_choice,
             system_prompt_box
         ]
     )
