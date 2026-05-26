@@ -11,6 +11,7 @@ import gradio as gr
 
 # === Handler Imports ===
 from components.prompt_viewer import get_system_prompt
+from .chat_handler import refresh_ui_state
 
 from components.chat_handler import (
     respond, 
@@ -45,6 +46,11 @@ from components.memory_panel import (
     full_reset,
 )
 
+
+def refresh_after_state_change(model_choice):
+    return refresh_ui_state(model_choice)
+
+
 def wire_persona_controls(
     persona_dropdown,
     intensity_slider,
@@ -63,25 +69,33 @@ def wire_persona_controls(
         apply_persona,
         inputs=[persona_dropdown, intensity_slider]
     ).then(
-        get_system_prompt,
+        refresh_after_state_change,
         inputs=[model_choice],
-        outputs=[system_prompt_box]
-    ).then(
-        get_status,
-        inputs=[model_choice],
-        outputs=[conn_status, prompt_version, active_persona, active_skill]
+        outputs=[
+            conn_status,
+            prompt_version,
+            active_persona,
+            active_skill,
+            current_session,
+            model_choice,
+            system_prompt_box
+        ]
     )
 
     reset_btn.click(
         reset_persona
     ).then(
-        get_system_prompt,
+        refresh_after_state_change,
         inputs=[model_choice],
-        outputs=[system_prompt_box]
-    ).then(
-        get_status,
-        inputs=[model_choice],
-        outputs=[conn_status, prompt_version, active_persona, active_skill]
+        outputs=[
+            conn_status,
+            prompt_version,
+            active_persona,
+            active_skill,
+            current_session,
+            model_choice,
+            system_prompt_box
+        ]
     ).then(
         lambda: "Default",
         outputs=[persona_dropdown]
@@ -110,25 +124,33 @@ def wire_skill_controls(
         apply_skill,
         inputs=[skill_dropdown]
     ).then(
-        get_system_prompt,
+        refresh_after_state_change,
         inputs=[model_choice],
-        outputs=[system_prompt_box]
-    ).then(
-        get_status,
-        inputs=[model_choice],
-        outputs=[conn_status, prompt_version, active_persona, active_skill]
+        outputs=[
+            conn_status,
+            prompt_version,
+            active_persona,
+            active_skill,
+            current_session,
+            model_choice,
+            system_prompt_box
+        ]
     )
 
     reset_skill_btn.click(
         reset_skill
     ).then(
-        get_system_prompt,
+        refresh_after_state_change,
         inputs=[model_choice],
-        outputs=[system_prompt_box]
-    ).then(
-        get_status,
-        inputs=[model_choice],
-        outputs=[conn_status, prompt_version, active_persona, active_skill]
+        outputs=[
+            conn_status,
+            prompt_version,
+            active_persona,
+            active_skill,
+            current_session,
+            model_choice,
+            system_prompt_box
+        ]
     ).then(
         lambda: "None",
         outputs=[skill_dropdown]
