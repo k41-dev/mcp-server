@@ -157,7 +157,7 @@ def build_dynamic_system_prompt(
     full_prompt = base_prompt + tool_section + critical_rules
 
     # === Zentrale Injection über AgentContext ===
-    ctx = AgentContext()
+    ctx = AgentContext.current()
     injection = ctx.get_prompt_injection()
     if injection:
         full_prompt += "\n\n" + injection
