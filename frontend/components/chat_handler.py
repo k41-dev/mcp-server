@@ -25,21 +25,32 @@ def _get_context_line() -> str:
     try:
         # Aktive Session
         session_result = call_mcp_tool("get_active_session", {})
-        try:
-            session_data = json.loads(session_result) if isinstance(session_result, str) else {}
-            current_session = session_data.get("session_id", "?")
-        except:
-            current_session = "?"
+        if isinstance(session_result, str):
+            try:
+                session_data = json.loads(session_result)
+                current_session = session_data.get("session_id", "?")
+            except:
+                pass
 
         # Persona
         persona_result = call_mcp_tool("get_active_persona", {})
-        if isinstance(persona_result, str) and "name" in persona_result:
-            active_persona_name = json.loads(persona_result).get("name", "None")
+        if isinstance(persona_result, str):
+            try:
+                data = json.loads(persona_result)
+                if isinstance(data, dict) and "name" in data:
+                    active_persona_name = data.get("name", "None")
+            except:
+                pass
 
         # Skill
         skill_result = call_mcp_tool("get_active_skill", {})
-        if isinstance(skill_result, str) and "name" in skill_result:
-            active_skill_name = json.loads(skill_result).get("name", "None")
+        if isinstance(skill_result, str):
+            try:
+                data = json.loads(skill_result)
+                if isinstance(data, dict) and "name" in data:
+                    active_skill_name = data.get("name", "None")
+            except:
+                pass
 
     except Exception:
         pass
@@ -55,10 +66,6 @@ def _get_context_line() -> str:
 
 
 def switch_model_provider(model_choice_value: str) -> str:
-    """
-    Wird beim Ändern des Model-Radios aufgerufen.
-    Setzt den aktiven Provider im Backend-State (Single Source of Truth).
-    """
     mapping = {
         "xAI": "xai",
         "Ollama": "ollama",
@@ -69,10 +76,8 @@ def switch_model_provider(model_choice_value: str) -> str:
     result = call_mcp_tool("set_active_provider", {"provider": provider})
     return result
 
+
 def _stream_final_answer(base_history: list, final_msg: str):
-    """
-    Streamt die finale Antwort satz-/absatzweise und erhält dabei die Formatierung besser.
-    """
     import re
     import time
 
@@ -81,27 +86,20 @@ def _stream_final_answer(base_history: list, final_msg: str):
 
     streamed_content = ""
 
-    for i, chunk in enumerate(chunks):
+    for chunk in chunks:
         streamed_content += chunk + "\n\n"
         current_msg = streamed_content.strip()
-
         yield base_history + [{"role": "assistant", "content": current_msg}]
         time.sleep(0.12)
 
-    # Finalen kompletten Zustand
     yield base_history + [{"role": "assistant", "content": final_msg}]
 
 
 def _build_tool_status_message(model_display: str, context_line: str, tool_names: list, step_count: int) -> str:
-    """
-    Erzeugt die Status-Nachricht während der Tool-Ausführung inklusive rotierendem Spinner.
-    """
     if not tool_names:
         return f"**{model_display}**\n*{context_line}*\n\n🔧 Verarbeite Tools ..."
 
     tool_list = ", ".join([f"`{name}`" for name in tool_names])
-
-    # Rotierender Spinner
     spinner_frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
     frame = spinner_frames[step_count % len(spinner_frames)]
 
@@ -115,23 +113,11 @@ def _build_tool_status_message(model_display: str, context_line: str, tool_names
 def _prepare_messages(history: list, user_message: str, provider: str = "grok"):
     clean_history = _sanitize_history(history)
 
-    # Aktuelle Session ermitteln (über Tool)
-    try:
-        session_result = call_mcp_tool("get_active_session", {})
-        if isinstance(session_result, str):
-            session_data = json.loads(session_result)
-            current_session_id = session_data.get("session_id", 1)
-        else:
-            current_session_id = 1
-    except:
-        current_session_id = 1
-
     # Dynamischen System-Prompt holen
     prompt_data = mcp_jsonrpc("prompts/get_dynamic", {"model": provider})
     system_prompt = prompt_data.get("prompt", "") if prompt_data else ""
     current_version = prompt_data.get("version", "v1") if prompt_data else "v1"
 
-    # Version-Check
     func = _prepare_messages
     if not hasattr(func, "_last_prompt_version"):
         func._last_prompt_version = None
@@ -149,7 +135,6 @@ def _prepare_messages(history: list, user_message: str, provider: str = "grok"):
 
 # ====================== HISTORY ======================
 def _sanitize_history(history: list) -> list:
-    """Convert any corrupted list content back to clean string."""
     cleaned = []
     for h in history:
         content = h.get("content", "")
@@ -165,11 +150,10 @@ def _sanitize_history(history: list) -> list:
     return cleaned
 
 
-# ====================== CORE AGENT (als Generator) ======================
+# ====================== CORE AGENT ======================
 def _chat_with_agent_generator(message: str, history: list, model_choice: str):
     tools = get_mcp_tools()
 
-    # === Provider-Mapping ===
     if model_choice == "xAI":
         provider_name = "xai"
         model_display = os.getenv("XAI_MODEL")
@@ -186,17 +170,6 @@ def _chat_with_agent_generator(message: str, history: list, model_choice: str):
         provider_name = "ollama"
         model_display = os.getenv("OLLAMA_MODEL")
         MAX_TURNS = 4
-
-    # Aktuelle Session + Context-Line holen
-    try:
-        session_result = call_mcp_tool("get_active_session", {})
-        if isinstance(session_result, str):
-            session_data = json.loads(session_result)
-            current_session_id = session_data.get("session_id", "?")
-        else:
-            current_session_id = "?"
-    except:
-        current_session_id = "?"
 
     context_line = _get_context_line()
     messages, current_version = _prepare_messages(history, message, provider_name)
@@ -274,28 +247,17 @@ def _chat_with_agent_generator(message: str, history: list, model_choice: str):
     yield history + [{"role": "user", "content": message}, {"role": "assistant", "content": "Max tool turns reached."}]
 
 
-# ====================== WRAPPER (für Backward-Compatibility) ======================
 def chat_with_agent(message: str, history: list, model_choice: str):
-    """
-    Kompatibilitäts-Wrapper.
-    Nutzt den Generator intern und gibt nur das finale Ergebnis zurück.
-    Bestehende Aufrufe funktionieren weiterhin ohne Änderung.
-    """
     final_result = None
     for partial_history in _chat_with_agent_generator(message, history, model_choice):
         final_result = partial_history
     return final_result
 
 
-# ====================== CORE STREAMING LOGIC ======================
+# ====================== STREAMING ======================
 def chat_with_agent_streaming(message: str, history: list, model_choice: str):
-    """
-    Streaming-Pfad (aktuell text-only, ohne Tool-Calling).
-    Sauberes sofortiges User-Message + inkrementelles Streaming der Assistant-Antwort.
-    """
     import time
 
-    # === Provider-Mapping ===
     if model_choice == "xAI":
         provider_name = "xai"
         model_display = os.getenv("XAI_MODEL")
@@ -308,21 +270,17 @@ def chat_with_agent_streaming(message: str, history: list, model_choice: str):
         provider_name = "anthropic"
         model_display = os.getenv("ANTHROPIC_MODEL")
         MAX_TURNS = 5
-    else:  # Ollama (Default)
+    else:
         provider_name = "ollama"
         model_display = os.getenv("OLLAMA_MODEL")
         MAX_TURNS = 4
 
-    # System Prompt
     messages, _ = _prepare_messages(history, message, provider_name)
-
     context_line = _get_context_line()
 
-    # === 1. Yield: Nur User-Message (sofort sichtbar) ===
     chat_history = history + [{"role": "user", "content": message}]
     yield chat_history
 
-    # Streaming vorbereiten
     url = "http://mcp-server:8321/mcp/stream"
     payload = {
         "params": {
@@ -357,7 +315,6 @@ def chat_with_agent_streaming(message: str, history: list, model_choice: str):
                     full_response += content
                     chunk_buffer += content
 
-                    # Assistant-Message beim ersten Chunk hinzufügen
                     if assistant_index is None:
                         chat_history.append({"role": "assistant", "content": ""})
                         assistant_index = len(chat_history) - 1
@@ -374,7 +331,6 @@ def chat_with_agent_streaming(message: str, history: list, model_choice: str):
                         chunk_buffer = ""
                         time.sleep(0.012)
 
-        # === Finaler Yield ohne Cursor ===
         final_content = full_response
         if context_line:
             final_content = f"**{model_display}**\n*{context_line}*\n\n{full_response}"
@@ -382,7 +338,6 @@ def chat_with_agent_streaming(message: str, history: list, model_choice: str):
         if assistant_index is not None:
             chat_history[assistant_index]["content"] = final_content
         else:
-            # Falls aus irgendeinem Grund kein Chunk kam
             chat_history.append({"role": "assistant", "content": final_content})
 
         yield chat_history
@@ -398,9 +353,7 @@ def chat_with_agent_streaming(message: str, history: list, model_choice: str):
 
 # ====================== STATUS & REFRESH ======================
 def get_status(model_choice_value: str = "xAI"):
-    """Liefert den aktuellen Status für die Top-Status-Bar zurück (robuste Version)."""
     try:
-        # === Persona ===
         persona_result = call_mcp_tool("get_active_persona", {})
         persona_name = "None"
         if isinstance(persona_result, str):
@@ -411,7 +364,6 @@ def get_status(model_choice_value: str = "xAI"):
             except:
                 pass
 
-        # === Skill ===
         skill_result = call_mcp_tool("get_active_skill", {})
         skill_name = "None"
         if isinstance(skill_result, str):
@@ -422,7 +374,6 @@ def get_status(model_choice_value: str = "xAI"):
             except:
                 pass
 
-        # === Provider (mit Fallback) ===
         provider_result = call_mcp_tool("get_active_provider", {})
         provider = "xai"
         if isinstance(provider_result, str):
@@ -433,13 +384,11 @@ def get_status(model_choice_value: str = "xAI"):
             except:
                 pass
 
-        # === Prompt Version ===
         model_map = {"xAI": "xai", "OpenAI": "openai", "Anthropic": "anthropic", "Ollama": "ollama"}
         model_for_prompt = model_map.get(model_choice_value, "xai")
         prompt_data = mcp_jsonrpc("prompts/get_dynamic", {"model": model_for_prompt})
         version = prompt_data.get("version", "unknown") if prompt_data else "unknown"
 
-        # === Tool Count ===
         try:
             tools = get_mcp_tools()
             tool_count = len(tools) if tools else 0
@@ -469,7 +418,6 @@ def refresh_all(model_choice_value: str):
 def refresh_ui_state(model_choice_value: str = "xAI"):
     status = get_status(model_choice_value)
 
-    # Session
     try:
         session_result = call_mcp_tool("get_active_session", {})
         if isinstance(session_result, str):
@@ -480,24 +428,21 @@ def refresh_ui_state(model_choice_value: str = "xAI"):
     except:
         session_text = "📍 Session: error"
 
-    # System Prompt
     try:
         prompt_text = get_system_prompt(model_choice_value)
     except:
         prompt_text = "❌ Konnte Prompt nicht laden"
 
-    # WICHTIG: Beim ersten Laden (wenn model_choice_value leer ist) geben wir gr.NO_UPDATE zurück
-    # damit das Radio seinen eigenen Default-Wert ("xAI") behält.
     model_value = model_choice_value if model_choice_value else gr.NO_UPDATE
 
     return (
-        status[0],           # conn
-        status[1],           # prompt version
-        status[2],           # persona
-        status[3],           # skill
-        session_text,        # current_session
-        model_value,         # model_choice Radio
-        prompt_text          # system_prompt_box
+        status[0],
+        status[1],
+        status[2],
+        status[3],
+        session_text,
+        model_value,
+        prompt_text
     )
 
 
