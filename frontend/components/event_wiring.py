@@ -340,8 +340,13 @@ def wire_sessions_panel(
     active_skill,
     current_session,
     system_prompt_box,
+    persona_dropdown,      # ← neu
+    skill_dropdown,        # ← neu
 ):
     """Verdrahtet das Sessions-Panel mit automatischer Status-Aktualisierung."""
+
+    from components.persona_control import load_initial_personas
+    from components.skill_control import load_initial_skills
 
     # Session auswählen → Details anzeigen
     session_dropdown.change(
@@ -360,7 +365,7 @@ def wire_sessions_panel(
         outputs=[session_dropdown]
     )
 
-    # Session wechseln + danach kompletten UI-Status aktualisieren
+    # Session wechseln + danach kompletten UI-Status + Dropdowns aktualisieren
     switch_btn.click(
         fn=switch_to_selected_session,
         inputs=[session_dropdown],
@@ -377,4 +382,16 @@ def wire_sessions_panel(
             model_choice,
             system_prompt_box
         ]
+    ).then(
+        lambda: gr.update(value="Default"),
+        outputs=[persona_dropdown]
+    ).then(
+        lambda: gr.update(value="None"),
+        outputs=[skill_dropdown]
+    ).then(
+        load_initial_personas,
+        outputs=[persona_dropdown]
+    ).then(
+        load_initial_skills,
+        outputs=[skill_dropdown]
     )

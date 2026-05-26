@@ -130,6 +130,8 @@ def create_ui():
                     active_skill=active_skill,
                     current_session=current_session,
                     system_prompt_box=system_prompt_box,
+                    persona_dropdown=persona_dropdown,   # ← neu
+                    skill_dropdown=skill_dropdown,       # ← neu
                 )
 
 
