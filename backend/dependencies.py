@@ -20,7 +20,7 @@ def get_settings():
 
 def get_agent_context() -> AgentContext:
     """Gibt die aktuelle AgentContext-Instanz zurück (Singleton)."""
-    return AgentContext()
+    return AgentContext.current()
 
 
 def get_registry():

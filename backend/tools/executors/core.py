@@ -203,6 +203,7 @@ def get_current_context(args: Dict[str, Any]) -> Dict[str, Any]:
     """Returns the full current AgentContext with additional metadata."""
     from backend.tools.context import AgentContext
     from backend.tools.registry import registry
+    from backend.prompt_builder import get_prompt_version_only
     import json
     import datetime
 
@@ -210,17 +211,13 @@ def get_current_context(args: Dict[str, Any]) -> Dict[str, Any]:
         ctx = AgentContext.current()
         tools_count = len(registry.get_all_definitions())
 
-        version = "unknown"
-        try:
-            from backend.prompt_builder import get_prompt_version_only
-            version = get_prompt_version_only(
-                active_persona=ctx.active_persona,
-                active_skill=ctx.active_skill,
-                tools_count=tools_count,
-                model=ctx.active_model
-            )
-        except Exception:
-            pass
+        # === Saubere Version-Berechnung (kein mcp_jsonrpc mehr) ===
+        version = get_prompt_version_only(
+            active_persona=ctx.active_persona,
+            active_skill=ctx.active_skill,
+            tools_count=tools_count,
+            model=ctx.active_model
+        )
 
         context_data = ctx.to_dict()
 
