@@ -318,3 +318,63 @@ def wire_initial_demo_loads(
             system_prompt_box
         ]
     )
+
+
+# ====================== SESSIONS PANEL ======================
+from components.sessions_panel import (
+    get_session_choices,
+    update_session_info,
+    switch_to_selected_session,
+)
+
+
+def wire_sessions_panel(
+    session_dropdown,
+    session_info,
+    refresh_btn,
+    switch_btn,
+    model_choice,
+    conn_status,
+    prompt_version,
+    active_persona,
+    active_skill,
+    current_session,
+    system_prompt_box,
+):
+    """Verdrahtet das Sessions-Panel mit automatischer Status-Aktualisierung."""
+
+    # Session auswählen → Details anzeigen
+    session_dropdown.change(
+        fn=update_session_info,
+        inputs=[session_dropdown],
+        outputs=[session_info]
+    )
+
+    # Sessions neu laden
+    def refresh_session_list():
+        new_choices = get_session_choices()
+        return gr.update(choices=new_choices)
+
+    refresh_btn.click(
+        fn=refresh_session_list,
+        outputs=[session_dropdown]
+    )
+
+    # Session wechseln + danach kompletten UI-Status aktualisieren
+    switch_btn.click(
+        fn=switch_to_selected_session,
+        inputs=[session_dropdown],
+        outputs=[session_info]
+    ).then(
+        refresh_after_state_change,
+        inputs=[model_choice],
+        outputs=[
+            conn_status,
+            prompt_version,
+            active_persona,
+            active_skill,
+            current_session,
+            model_choice,
+            system_prompt_box
+        ]
+    )

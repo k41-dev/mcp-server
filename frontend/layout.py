@@ -23,6 +23,7 @@ from components import (
 from components.prompt_viewer import get_system_prompt
 from components.mcp_client import get_mcp_tools
 from components.chat_handler import respond, get_status
+from components.sessions_panel import create_sessions_panel
 
 # === Event Wiring ===
 from components.event_wiring import (
@@ -111,6 +112,25 @@ def create_ui():
                     insert_tool_btn=insert_tool_btn,
                     msg=msg,
                 )
+
+
+                # === Sessions Panel ===
+                session_dropdown, session_info, refresh_sessions_btn, switch_session_btn = create_sessions_panel()
+
+                wire_sessions_panel(
+                    session_dropdown=session_dropdown,
+                    session_info=session_info,
+                    refresh_btn=refresh_sessions_btn,
+                    switch_btn=switch_session_btn,
+                    model_choice=model_choice,
+                    conn_status=conn_status,
+                    prompt_version=prompt_version,
+                    active_persona=active_persona,
+                    active_skill=active_skill,
+                    current_session=current_session,
+                    system_prompt_box=system_prompt_box,
+                )
+
 
                 # === Memory Panel ===
                 memory_box, show_lt_btn, clear_lt_btn, show_chat_btn, clear_chat_btn, full_reset_btn = create_memory_panel()
