@@ -292,34 +292,39 @@ def list_all_memories(session_id: int) -> List[Dict[str, Any]]:
     return recall_memories(session_id, query="", limit=50)
 
 
+# ====================== CLEAR FUNCTIONS (jetzt session-aware) ======================
 def clear_long_term_memory(session_id: Optional[int] = None):
-    """Clears long-term memory. 
-    If session_id is given → only this session. 
-    If None → global (used by full_reset)."""
+    """Clears long-term memory.
+    - If session_id is given → only deletes memory of this session
+    - If None → global delete (used by full_reset)
+    """
     conn = get_db_connection()
     cur = conn.cursor()
 
     if session_id is not None:
         cur.execute("DELETE FROM long_term_memories WHERE session_id = ?", (session_id,))
+        logger.warning(f"🗑️ Long-term Memory der Session {session_id} wurde geleert.")
     else:
         cur.execute("DELETE FROM long_term_memories")
+        logger.warning("🗑️ Long-term Memory wurde global geleert!")
 
     conn.commit()
     conn.close()
-    logger.warning("🗑️ Long-term Memory wurde geleert!" + (f" (Session {session_id})" if session_id else " (global)"))
 
 
 def clear_chat_history(session_id: Optional[int] = None):
     """Clears chat history.
-    If session_id is given → only this session (DELETE).
-    If None → nuclear (DROP TABLE) – only for full_reset."""
+    - If session_id is given → only deletes messages of this session (DELETE)
+    - If None → nuclear wipe (DROP + CREATE) – only intended for full_reset
+    """
     conn = get_db_connection()
     cur = conn.cursor()
 
     if session_id is not None:
         cur.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
+        logger.warning(f"🗑️ Chat History der Session {session_id} wurde geleert.")
     else:
-        # Nuclear path (full_reset)
+        # Nuclear path (nur für full_reset gedacht)
         cur.execute("DROP TABLE IF EXISTS messages")
         cur.execute("""
             CREATE TABLE messages (
@@ -331,21 +336,19 @@ def clear_chat_history(session_id: Optional[int] = None):
                 FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
             )
         """)
+        logger.warning("🗑️ Chat History wurde global (nuklear) zurückgesetzt!")
 
     conn.commit()
     conn.close()
-    logger.warning("🗑️ Chat History wurde geleert!" + (f" (Session {session_id})" if session_id else " (global)"))
 
 
 def full_reset():
-    """Nuclear wipe: deletes the entire chat_memory.db file and recreates clean tables.
-    Guarantees a completely fresh start."""
+    """Nuclear wipe: deletes the entire database and recreates clean tables."""
     import os
     db_path = str(DB_PATH)
     if os.path.exists(db_path):
         os.remove(db_path)
-    
-    # Recreate all tables immediately
+
     init_db()
     print("🗑️ FULL DATABASE WIPE COMPLETE: Everything deleted and fresh tables created.")
 
