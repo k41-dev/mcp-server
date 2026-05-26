@@ -54,6 +54,15 @@ just work fine for me atm. Anthropic has a different SDK, so this might take a b
 All code was vibecoded with the grok-4.3 model, I just asked the Expert sometimes, when we had
 to get a different opinion on certain things.
 
+Best way to setup is with uv, which is a very useful packet-manager. You simply uv sync and get
+all the packages.
+
+Docker is atm a hardcoded subnet called app-net with static ips, so create this subnet before or remove
+the static parts. 
+If you want to add real websearch and browsepage-tool, feel free to look at searxng and browserless, 
+which you can add to the docker-compose file. I have setup env-vars were you can add the container-
+adress. 
+
 ## Quick Start (Recommended)
 
 ```bash
