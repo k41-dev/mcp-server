@@ -145,6 +145,8 @@ class AgentContext:
             get_active_provider as _get_active_provider,
         )
 
+        self.save_context_to_session()
+
         session_data = session_manager.get_session(session_id)
         if not session_data:
             return False
