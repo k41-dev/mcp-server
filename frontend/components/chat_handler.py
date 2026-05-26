@@ -397,9 +397,13 @@ def chat_with_agent_streaming(message: str, history: list, model_choice: str):
 
 
 # ====================== STATUS & REFRESH ======================
-def get_status(model_choice_value: str = "Grok"):
-    """Liefert den aktuellen Status für die Top-Status-Bar zurück."""
+def get_status(model_choice_value: str = "xAI"):
+    """Liefert den aktuellen Status für die Top-Status-Bar zurück (robuster)."""
+    from backend.tools.context import AgentContext
+
     try:
+        ctx = AgentContext.current()
+
         # Tools zählen
         try:
             tools = get_mcp_tools()
@@ -407,25 +411,14 @@ def get_status(model_choice_value: str = "Grok"):
         except:
             tool_count = 0
 
-        # Aktive Persona & Skill
-        persona_name = "None"
-        skill_name = "None"
+        # Persona & Skill direkt aus dem aktuellen Context holen
+        persona = ctx.active_persona or {}
+        skill = ctx.active_skill or {}
 
-        try:
-            persona_result = call_mcp_tool("get_active_persona", {})
-            if isinstance(persona_result, str) and "name" in persona_result:
-                persona_name = json.loads(persona_result).get("name", "None")
-        except:
-            persona_name = "Error"
+        persona_name = persona.get("name", "None") if persona else "None"
+        skill_name = skill.get("name", "None") if skill else "None"
 
-        try:
-            skill_result = call_mcp_tool("get_active_skill", {})
-            if isinstance(skill_result, str) and "name" in skill_result:
-                skill_name = json.loads(skill_result).get("name", "None")
-        except:
-            skill_name = "Error"
-
-        # Prompt Version
+        # Prompt Version frisch holen
         try:
             model_map = {"xAI": "xai", "OpenAI": "openai", "Anthropic": "anthropic", "Ollama": "ollama"}
             model_for_prompt = model_map.get(model_choice_value, "xai")
@@ -433,6 +426,9 @@ def get_status(model_choice_value: str = "Grok"):
             version = prompt_data.get("version", "unknown") if prompt_data else "unknown"
         except:
             version = "error"
+
+        # Provider mit Fallback
+        provider = ctx.provider or "xai"
 
         return (
             f"✅ Connected • {tool_count} tools",
