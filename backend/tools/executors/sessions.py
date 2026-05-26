@@ -27,27 +27,42 @@ def create_session(args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def list_sessions(args: Dict[str, Any]) -> Dict[str, Any]:
-    """Listet alle vorhandenen Sessions auf."""
+    """Listet alle vorhandenen Sessions als saubere JSON-Liste auf."""
     try:
         sessions = session_manager.list_sessions()
 
         if not sessions:
             return {
-                "content": [{"type": "text", "text": "Keine Sessions vorhanden."}]
+                "content": [{
+                    "type": "text",
+                    "text": "[]"
+                }]
             }
 
-        lines = []
-        for s in sessions:
-            lines.append(f"• ID: {s['session_id']} | Name: {s['name']} | Last active: {s['last_active']}")
+        # Saubere strukturierte Liste zurückgeben
+        structured = [
+            {
+                "session_id": s["session_id"],
+                "name": s.get("name", f"Session-{s['session_id']}"),
+                "last_active": s.get("last_active", "")
+            }
+            for s in sessions
+        ]
 
-        text = "**Vorhandene Sessions:**\n" + "\n".join(lines)
-
+        import json
         return {
-            "content": [{"type": "text", "text": text}]
+            "content": [{
+                "type": "text",
+                "text": json.dumps(structured, ensure_ascii=False)
+            }]
         }
+
     except Exception as e:
         return {
-            "content": [{"type": "text", "text": f"Error listing sessions: {str(e)}"}],
+            "content": [{
+                "type": "text",
+                "text": f"Error listing sessions: {str(e)}"
+            }],
             "isError": True
         }
 
