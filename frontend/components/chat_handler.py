@@ -400,16 +400,6 @@ def chat_with_agent_streaming(message: str, history: list, model_choice: str):
 def get_status(model_choice_value: str = "Grok"):
     """Liefert den aktuellen Status für die Top-Status-Bar zurück."""
     try:
-        # Aktive Session holen
-        session_result = call_mcp_tool("get_active_session", {})
-        try:
-            session_data = json.loads(session_result) if isinstance(session_result, str) else {}
-            current_session_id = session_data.get("session_id", 1)
-            session_name = session_data.get("name", "default")
-        except:
-            current_session_id = 1
-            session_name = "default"
-
         # Tools zählen
         try:
             tools = get_mcp_tools()
@@ -417,7 +407,7 @@ def get_status(model_choice_value: str = "Grok"):
         except:
             tool_count = 0
 
-        # Aktive Persona & Skill holen (bleibt wie bisher)
+        # Aktive Persona & Skill
         persona_name = "None"
         skill_name = "None"
 
@@ -448,8 +438,7 @@ def get_status(model_choice_value: str = "Grok"):
             f"✅ Connected • {tool_count} tools",
             f"📜 Prompt: {version}",
             f"🎭 Persona: {persona_name}",
-            f"🛠️ Skill: {skill_name}",
-            f"📍 Session: {current_session_id} ({session_name})"
+            f"🛠️ Skill: {skill_name}"
         )
 
     except Exception as e:
@@ -457,8 +446,7 @@ def get_status(model_choice_value: str = "Grok"):
             f"❌ Error: {str(e)}",
             "📜 Prompt: error",
             "🎭 Persona: error",
-            "🛠️ Skill: error",
-            "📍 Session: error"
+            "🛠️ Skill: error"
         )
 
 
