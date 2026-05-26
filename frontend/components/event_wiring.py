@@ -279,12 +279,12 @@ def wire_initial_demo_loads(
 ):
     """Verdrahtet alle demo.load() und model_change Events.
 
-    Verwendet die zentrale refresh_ui_state Funktion, damit
+    Verwendet die zentrale refresh_after_state_change Funktion, damit
     Status-Bar und System Prompt Viewer immer synchron aktualisiert werden.
     """
     # Initial Load: Ein einziger Aufruf für Status + Prompt
     demo.load(
-        refresh_ui_state,
+        refresh_after_state_change,
         inputs=[model_choice],
         outputs=[
             conn_status,
@@ -292,7 +292,7 @@ def wire_initial_demo_loads(
             active_persona,
             active_skill,
             current_session,
-            model_choice,           # ← hinzugefügt
+            model_choice,
             system_prompt_box
         ]
     )
@@ -302,7 +302,7 @@ def wire_initial_demo_loads(
 
     def on_model_change(model_choice_value: str):
         switch_model_provider(model_choice_value)
-        return refresh_ui_state(model_choice_value)
+        return refresh_after_state_change(model_choice_value)
 
     # Model-Wechsel: Zentrale Funktion statt .then()-Kette
     model_choice.change(
@@ -314,7 +314,7 @@ def wire_initial_demo_loads(
             active_persona,
             active_skill,
             current_session,
-            model_choice,           # ← hinzugefügt
+            model_choice,
             system_prompt_box
         ]
     )
