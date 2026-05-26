@@ -207,7 +207,7 @@ def get_current_context(args: Dict[str, Any]) -> Dict[str, Any]:
     import datetime
 
     try:
-        ctx = AgentContext.current()          # ← Wichtig! Jetzt korrekt
+        ctx = AgentContext.current()
         tools_count = len(registry.get_all_definitions())
 
         version = "dynamic-v1"
@@ -223,6 +223,14 @@ def get_current_context(args: Dict[str, Any]) -> Dict[str, Any]:
             pass
 
         context_data = ctx.to_dict()
+
+        # === Provider Fallback (wichtig für Anzeige) ===
+        provider = context_data.get("provider")
+        if not provider:
+            from backend.tools.state import get_active_provider as _get_active_provider
+            provider = _get_active_provider() or "xai"
+            context_data["provider"] = provider
+
         context_data.update({
             "prompt_version": version,
             "tools_loaded": tools_count,
@@ -245,7 +253,7 @@ def get_current_context(args: Dict[str, Any]) -> Dict[str, Any]:
             }],
             "isError": True
         }
-
+        
 
 def list_executors(args: Dict[str, Any]) -> Dict[str, Any]:
     """Gibt alle dynamisch entdeckten Executor-Funktionen zurück."""

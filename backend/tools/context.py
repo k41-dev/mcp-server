@@ -182,7 +182,14 @@ class AgentContext:
         self.session_id = session_id
         session_manager.set_current_session_id(session_id)
 
+        try:
+            from backend.prompt_cache import clear_cache
+            clear_cache()
+        except:
+            pass
+
         return True
+
 
     def save_context_to_session(self, session_id: Optional[int] = None) -> bool:
         """
