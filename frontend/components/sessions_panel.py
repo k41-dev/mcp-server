@@ -93,9 +93,6 @@ def create_sessions_panel():
                 scale=3
             )
             create_session_btn = gr.Button("Create Session", size="sm", variant="secondary")
-
-        gr.Markdown("**🗑️ Session löschen (endgültig — Default-Session ist geschützt)**")
-        with gr.Row():
             delete_session_btn = gr.Button("Delete Session", size="sm", variant="stop")
 
     return (
