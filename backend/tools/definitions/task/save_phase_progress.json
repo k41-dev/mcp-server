@@ -1,0 +1,32 @@
+{
+  "name": "save_phase_progress",
+  "description": "Saves structured progress information for a specific phase of a long-running task. Use this instead of generic store_memory when tracking autonomous work phases.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "phase_name": {
+        "type": "string",
+        "description": "Name of the current phase (e.g. 'Research', 'Implementation', 'Testing')"
+      },
+      "status": {
+        "type": "string",
+        "enum": ["in_progress", "completed", "blocked", "waiting_for_input"],
+        "description": "Current status of this phase"
+      },
+      "summary": {
+        "type": "string",
+        "description": "Short summary of what was achieved or the current situation in this phase"
+      },
+      "next_step": {
+        "type": "string",
+        "description": "What should be done next (optional but recommended)"
+      },
+      "notes": {
+        "type": "string",
+        "description": "Additional notes or context (optional)"
+      }
+    },
+    "required": ["phase_name", "status", "summary"]
+  },
+  "category": "task"
+}

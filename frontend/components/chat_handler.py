@@ -157,19 +157,19 @@ def _chat_with_agent_generator(message: str, history: list, model_choice: str):
     if model_choice == "xAI":
         provider_name = "xai"
         model_display = os.getenv("XAI_MODEL")
-        MAX_TURNS = 6
+        MAX_TURNS = 10 if active_skill_name == "long_running_autonomous" else 6
     elif model_choice == "OpenAI":
         provider_name = "openai"
         model_display = os.getenv("OPENAI_MODEL")
-        MAX_TURNS = 6
+        MAX_TURNS = 10 if active_skill_name == "long_running_autonomous" else 6
     elif model_choice == "Anthropic":
         provider_name = "anthropic"
         model_display = os.getenv("ANTHROPIC_MODEL")
-        MAX_TURNS = 5
+        MAX_TURNS = 8 if active_skill_name == "long_running_autonomous" else 5
     else:
         provider_name = "ollama"
         model_display = os.getenv("OLLAMA_MODEL")
-        MAX_TURNS = 4
+        MAX_TURNS = 6 if active_skill_name == "long_running_autonomous" else 4
 
     context_line = _get_context_line()
     messages, current_version = _prepare_messages(history, message, provider_name)
