@@ -11,6 +11,7 @@ import gradio as gr
 
 # === Zentrale Refresh-Funktion ===
 from .chat_handler import refresh_ui_state, respond, switch_model_provider
+from components.memory_panel import get_chat_history
 
 # === Handler Imports ===
 from components.persona_control import (
@@ -348,8 +349,9 @@ def wire_sessions_panel(
     active_skill,
     current_session,
     system_prompt_box,
-    persona_dropdown,      # ← neu
-    skill_dropdown,        # ← neu
+    persona_dropdown,      
+    skill_dropdown,
+    memory_box        
 ):
     """Verdrahtet das Sessions-Panel mit automatischer Status-Aktualisierung."""
 
@@ -402,4 +404,7 @@ def wire_sessions_panel(
     ).then(
         load_initial_skills,
         outputs=[skill_dropdown]
+    ).then(
+        get_chat_history,           
+        outputs=[memory_box]
     )
