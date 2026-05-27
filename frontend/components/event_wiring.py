@@ -43,55 +43,51 @@ from components.memory_panel import (
 )
 
 
-def set_persona_dropdown_to_active():
-    """Setzt das Persona-Dropdown auf die aktuell aktive Persona der Session."""
-    result = call_mcp_tool("get_active_persona", {})
+def sync_dropdown_to_active_state(component: str):
+    """
+    Setzt ein Dropdown (Persona oder Skill) auf den aktuell aktiven Wert der Session.
+    
+    Args:
+        component: "persona" oder "skill"
+    """
+    if component == "persona":
+        tool_name = "get_active_persona"
+        default_value = "Default"
+    elif component == "skill":
+        tool_name = "get_active_skill"
+        default_value = "None"
+    else:
+        return gr.update()
+
+    result = call_mcp_tool(tool_name, {})
     if isinstance(result, str):
         try:
             data = json.loads(result)
             if isinstance(data, dict) and "name" in data:
-                name = data["name"]
-                return gr.update(value=name)
+                return gr.update(value=data["name"])
         except Exception:
             pass
-    return gr.update(value="Default")
 
-
-def set_skill_dropdown_to_active():
-    """Setzt das Skill-Dropdown auf den aktuell aktiven Skill der Session."""
-    result = call_mcp_tool("get_active_skill", {})
-    if isinstance(result, str):
-        try:
-            data = json.loads(result)
-            if isinstance(data, dict) and "name" in data:
-                name = data["name"]
-                return gr.update(value=name)
-        except Exception:
-            pass
-    return gr.update(value="None")
+    return gr.update(value=default_value)
 
 
 def refresh_after_session_switch(model_choice):
     """
     Zentrale Refresh-Funktion nach einem Session-Wechsel.
-    Aktualisiert:
-    - Status Bar + System Prompt
-    - Persona & Skill Dropdowns
-    - Memory Box (Chat History)
+    Aktualisiert Status, Prompt, Dropdowns und Memory Box.
     """
-    # 1. Status Bar + System Prompt + aktive Persona/Skill Texte
+    # 1. Status Bar + System Prompt + aktive Texte (Persona/Skill)
     status_updates = refresh_after_state_change(model_choice)
 
     # 2. Persona Dropdown auf den in der Session gespeicherten Wert setzen
-    persona_update = set_persona_dropdown_to_active()
+    persona_update = sync_dropdown_to_active_state("persona")
 
     # 3. Skill Dropdown auf den in der Session gespeicherten Wert setzen
-    skill_update = set_skill_dropdown_to_active()
+    skill_update = sync_dropdown_to_active_state("skill")
 
-    # 4. Memory Box mit der Chat History der neuen Session befüllen
+    # 4. Memory Box mit Chat History der neuen Session
     memory_update = get_chat_history()
 
-    # Zusammenführen der Updates in der richtigen Reihenfolge
     return status_updates + (persona_update, skill_update, memory_update)
 
 
