@@ -1,0 +1,15 @@
+{
+  "name": "delete_session",
+  "description": "Löscht eine komplette Session inklusive Chat-History und Long-Term Memory. Die Default-Session kann nicht gelöscht werden.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "session_id": {
+        "type": "integer",
+        "description": "Die numerische ID der zu löschenden Session"
+      }
+    },
+    "required": ["session_id"]
+  },
+  "category": "session"
+}

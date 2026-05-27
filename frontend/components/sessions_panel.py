@@ -89,10 +89,14 @@ def create_sessions_panel():
         with gr.Row():
             new_session_name = gr.Textbox(
                 label="Session Name (optional)",
-                placeholder="z.B. Projekt XY",
+                placeholder="z.B. Projekt XY  oder  Session-ID zum Löschen",
                 scale=3
             )
             create_session_btn = gr.Button("Create Session", size="sm", variant="secondary")
+
+        gr.Markdown("**🗑️ Session löschen (endgültig — Default-Session ist geschützt)**")
+        with gr.Row():
+            delete_session_btn = gr.Button("Delete Session", size="sm", variant="stop")
 
     return (
         session_dropdown, 
@@ -100,5 +104,6 @@ def create_sessions_panel():
         refresh_sessions_btn, 
         switch_session_btn,
         new_session_name,          
-        create_session_btn          
+        create_session_btn,
+        delete_session_btn
     )

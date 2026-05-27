@@ -215,3 +215,42 @@ def get_active_session(args: Dict[str, Any]) -> Dict[str, Any]:
             "content": [{"type": "text", "text": f"Error: {str(e)}"}],
             "isError": True
         }
+
+
+def delete_session(args: Dict[str, Any]) -> Dict[str, Any]:
+    """Löscht eine Session komplett (inkl. Messages + Long-Term Memory).
+    Die Default-Session kann nicht gelöscht werden (Schutz im SessionManager)."""
+    from backend.tools.session_manager import session_manager
+
+    session_id = args.get("session_id")
+
+    if not session_id:
+        return {
+            "content": [{"type": "text", "text": "Error: session_id ist erforderlich"}],
+            "isError": True
+        }
+
+    try:
+        session_id = int(session_id)
+        success = session_manager.delete_session(session_id)
+
+        if success:
+            return {
+                "content": [{
+                    "type": "text",
+                    "text": f"✅ Session {session_id} wurde erfolgreich gelöscht."
+                }]
+            }
+        else:
+            return {
+                "content": [{
+                    "type": "text",
+                    "text": f"❌ Session {session_id} konnte nicht gelöscht werden (möglicherweise Default-Session oder nicht vorhanden)."
+                }],
+                "isError": True
+            }
+    except Exception as e:
+        return {
+            "content": [{"type": "text", "text": f"Error beim Löschen: {str(e)}"}],
+            "isError": True
+        }

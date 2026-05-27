@@ -137,6 +137,65 @@ def create_and_switch_to_new_session(name: str):
     return result, gr.update(choices=new_choices)
 
 
+def delete_session_by_input(name_or_id: str):
+    """Löscht eine Session. 
+    Wenn die gelöschte Session die aktuell aktive war, wird automatisch zur Default-Session gewechselt."""
+    val = (name_or_id or "").strip()
+    if not val:
+        return "❌ Bitte Session-ID oder Namen eingeben.", gr.update()
+
+    session_id = None
+
+    # ID oder Name auflösen
+    try:
+        session_id = int(val)
+    except ValueError:
+        try:
+            sessions_json = call_mcp_tool("list_sessions", {})
+            if isinstance(sessions_json, str):
+                session_list = json.loads(sessions_json)
+                for s in session_list:
+                    if s.get("name", "").lower() == val.lower():
+                        session_id = s["session_id"]
+                        break
+        except Exception:
+            pass
+
+    if session_id is None:
+        return f"❌ Session '{val}' nicht gefunden.", gr.update()
+
+    # Aktuell aktive Session ermitteln (bevor wir löschen)
+    current_active_id = None
+    try:
+        active_result = call_mcp_tool("get_active_session", {})
+        if isinstance(active_result, str):
+            active_data = json.loads(active_result)
+            current_active_id = active_data.get("session_id")
+    except Exception:
+        pass
+
+    # Session löschen
+    result = call_mcp_tool("delete_session", {"session_id": session_id})
+
+    # Prüfen, ob wir die aktive Session gelöscht haben
+    deleted_active_session = (session_id == current_active_id)
+
+    if deleted_active_session:
+        # Zur Default-Session wechseln
+        try:
+            # Default-Session ist normalerweise ID 1
+            call_mcp_tool("switch_session", {"session_id": 1})
+        except Exception:
+            pass
+
+    # Dropdown neu laden
+    new_choices = get_session_choices()
+
+    # Rückgabe: Message + aktualisiertes Dropdown
+    # (den vollständigen Refresh machen wir im Wiring)
+    return result, gr.update(choices=new_choices)
+
+
 def refresh_after_state_change(model_choice):
     return refresh_ui_state(model_choice)
 
@@ -449,7 +508,8 @@ def wire_sessions_panel(
     skill_dropdown,
     memory_box,
     new_session_name,
-    create_session_btn,        
+    create_session_btn,
+    delete_session_btn,        
 ):
     """Verdrahtet das Sessions-Panel mit automatischer Status-Aktualisierung."""
 
@@ -528,4 +588,28 @@ def wire_sessions_panel(
     ).then(
         lambda: "",   # Namensfeld leeren
         outputs=[new_session_name]
+    )
+
+    delete_session_btn.click(
+        fn=delete_session_by_input,
+        inputs=[new_session_name],
+        outputs=[session_info, session_dropdown]
+    ).then(
+        lambda: "",
+        outputs=[new_session_name]
+    ).then(
+        refresh_after_session_switch,
+        inputs=[model_choice],
+        outputs=[
+            conn_status,
+            prompt_version,
+            active_persona,
+            active_skill,
+            current_session,
+            model_choice,
+            system_prompt_box,
+            persona_dropdown,
+            skill_dropdown,
+            memory_box
+        ]
     )
