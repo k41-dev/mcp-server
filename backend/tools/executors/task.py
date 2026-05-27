@@ -5,14 +5,14 @@ task.py - Task / Progress Tracking Executors
 
 from typing import Dict, Any
 from backend.tools.context import AgentContext
-from backend.memory import store_long_term_memory
 
 
 def save_phase_progress(args: Dict[str, Any]) -> Dict[str, Any]:
     """
     Speichert strukturierten Phasen-Fortschritt im Long-Term Memory.
-    Wird bevorzugt für langes autonomes Arbeiten verwendet.
     """
+    from backend.memory import store_long_term_memory
+
     ctx = AgentContext.current()
 
     phase_name = args.get("phase_name", "").strip()
@@ -30,13 +30,11 @@ def save_phase_progress(args: Dict[str, Any]) -> Dict[str, Any]:
             "isError": True
         }
 
-    # Strukturierten Fact bauen
     fact_parts = [
         f"[PHASE PROGRESS] {phase_name}",
         f"Status: {status}",
         f"Summary: {summary}"
     ]
-
     if next_step:
         fact_parts.append(f"Next step: {next_step}")
     if notes:
@@ -61,12 +59,12 @@ def save_phase_progress(args: Dict[str, Any]) -> Dict[str, Any]:
 def get_phase_progress(args: Dict[str, Any]) -> Dict[str, Any]:
     """
     Gibt alle gespeicherten Phase-Progress-Einträge der aktuellen Session zurück.
-    Neueste Einträge zuerst. Optimiert für LongRunningAutonomous Resume-Checks.
     """
+    from backend.memory import recall_memories   # ← Lazy Import (wichtig!)
+
     ctx = AgentContext.current()
 
     try:
-        # Suche gezielt nach Phase-Progress-Einträgen
         memories = recall_memories(
             session_id=ctx.session_id,
             query="PHASE PROGRESS",
@@ -81,7 +79,6 @@ def get_phase_progress(args: Dict[str, Any]) -> Dict[str, Any]:
                 }]
             }
 
-        # Formatiere die Ergebnisse übersichtlich für den Agenten
         formatted_entries = []
         for mem in memories:
             fact = mem.get("fact", "")
