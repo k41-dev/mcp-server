@@ -99,18 +99,19 @@ def refresh_after_session_switch(model_choice):
 
 # ====================== CREATE SESSION ======================
 def create_and_switch_to_new_session(name: str):
-    """Erstellt eine neue Session und wechselt automatisch dorthin."""
+    """Erstellt eine neue Session, wechselt automatisch dorthin und aktualisiert das Dropdown korrekt."""
     name = name.strip() if name else None
 
-    # Session erstellen
+    # 1. Session erstellen
     result = call_mcp_tool("create_session", {"name": name} if name else {})
 
     if isinstance(result, str) and "Error" in result:
-        return result
+        return result, gr.update()
 
-    # Aktuelle Sessions laden und die neueste holen
+    # 2. Sessions neu laden
     sessions_json = call_mcp_tool("list_sessions", {})
     new_session_id = None
+    new_choices = get_session_choices()
 
     if isinstance(sessions_json, str):
         try:
@@ -124,7 +125,16 @@ def create_and_switch_to_new_session(name: str):
         # Direkt zur neuen Session wechseln
         call_mcp_tool("switch_session", {"session_id": new_session_id})
 
-    return result
+        # Korrekten Choice-String für die neue Session finden
+        new_value = None
+        for choice in new_choices:
+            if str(choice).startswith(f"{new_session_id} —"):
+                new_value = choice
+                break
+
+        return result, gr.update(choices=new_choices, value=new_value)
+
+    return result, gr.update(choices=new_choices)
 
 
 def refresh_after_state_change(model_choice):
@@ -469,6 +479,11 @@ def wire_sessions_panel(
         inputs=[session_dropdown],
         outputs=[session_info]
     ).then(
+        # Sicherstellen, dass das Dropdown den ausgewählten Wert auch visuell anzeigt
+        lambda selected_session: gr.update(value=selected_session),
+        inputs=[session_dropdown],
+        outputs=[session_dropdown]
+    ).then(
         refresh_after_session_switch,
         inputs=[model_choice],
         outputs=[
@@ -479,9 +494,9 @@ def wire_sessions_panel(
             current_session,
             model_choice,
             system_prompt_box,
-            persona_dropdown,    
+            persona_dropdown,
             skill_dropdown,
-            memory_box,
+            memory_box
         ]
     )
 
@@ -494,9 +509,8 @@ def wire_sessions_panel(
     create_session_btn.click(
         fn=create_and_switch_to_new_session,
         inputs=[new_session_name],
-        outputs=[session_info]
+        outputs=[session_info, session_dropdown]
     ).then(
-        # Nach erfolgreichem Erstellen + Wechsel → zentrale Refresh-Funktion nutzen
         refresh_after_session_switch,
         inputs=[model_choice],
         outputs=[

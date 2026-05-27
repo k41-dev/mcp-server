@@ -12,22 +12,32 @@ def get_session_choices():
     """Holt alle Sessions und gibt eine Liste für das Dropdown zurück."""
     try:
         result = call_mcp_tool("list_sessions", {})
-        if not result or result.startswith("Error") or result == "[]":
+
+        # Fehlerfälle abfangen
+        if not result or result.startswith("Error") or result.strip() == "[]":
             return ["Keine Sessions gefunden"]
 
-        # JSON parsen
         sessions = json.loads(result)
+
+        # Sicherstellen, dass es eine Liste ist
+        if not isinstance(sessions, list):
+            return ["Fehler: Ungültiges Session-Format"]
 
         choices = []
         for s in sessions:
             sid = s.get("session_id")
-            name = s.get("name", f"Session {sid}")
+            name = s.get("name") or f"Session {sid}"
+
+            # ID immer als String behandeln für konsistente Formatierung
             choices.append(f"{sid} — {name}")
 
         return choices if choices else ["Keine Sessions gefunden"]
 
+    except json.JSONDecodeError:
+        print("[get_session_choices] JSON konnte nicht geparst werden.")
+        return ["Fehler beim Laden der Sessions"]
     except Exception as e:
-        print(f"[get_session_choices] Fehler: {e}")
+        print(f"[get_session_choices] Unerwarteter Fehler: {e}")
         return ["Fehler beim Laden der Sessions"]
 
 
@@ -89,6 +99,6 @@ def create_sessions_panel():
         session_info, 
         refresh_sessions_btn, 
         switch_session_btn,
-        new_session_name,           # ← neu
-        create_session_btn          # ← neu
+        new_session_name,          
+        create_session_btn          
     )
