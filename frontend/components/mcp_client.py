@@ -23,51 +23,44 @@ from typing import Any, Dict, Optional
 MCP_URL = os.getenv("MCP_PUBLIC_URL")
 
 
-def mcp_jsonrpc(method: str, params: dict = None, request_id: int = 1, max_retries: int = 4) -> Any:
-    """JSON-RPC Aufruf mit Retry bei transienten Fehlern."""
+def mcp_jsonrpc(method: str, params: dict = None, request_id: int = 1, max_retries: int = 2) -> Any:
+    """JSON-RPC Aufruf mit leichtem Retry bei Netzwerkproblemen."""
     url = f"{MCP_URL.rstrip('/')}/mcp"
     payload = {"jsonrpc": "2.0", "id": request_id, "method": method, "params": params or {}}
 
-    last_exception = None
-
     for attempt in range(max_retries):
         try:
-            response = requests.post(url, json=payload, timeout=30)
+            response = requests.post(url, json=payload, timeout=25)
             response.raise_for_status()
             data = response.json()
 
             if data.get("error"):
                 err = data["error"]
-                # Bei echten Server-Fehlern nicht endlos retryen
-                if isinstance(err, dict) and err.get("code") in [-32603, -32602]:
+                # Bei echten Server-Fehlern nicht retryen
+                if isinstance(err, dict):
                     return {"error": err.get("message", str(err))}
                 return {"error": str(err)}
 
             return data.get("result")
 
-        except (requests.exceptions.Timeout,
-                requests.exceptions.ConnectionError,
-                requests.exceptions.ReadTimeout) as e:
-            last_exception = e
-            wait_time = min(2 ** attempt, 8)  # 1s, 2s, 4s, 8s
-            print(f"[MCP Retry] Versuch {attempt + 1}/{max_retries} fehlgeschlagen ({type(e).__name__}). Warte {wait_time}s...")
-            time.sleep(wait_time)
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError, requests.exceptions.ReadTimeout):
+            if attempt == max_retries - 1:
+                return {"error": "MCP connection timeout after retries"}
+            time.sleep(1)
             continue
 
         except Exception as e:
-            # Bei anderen Fehlern nicht retryen
             return {"error": f"Unexpected error: {str(e)}"}
 
-    # Nach allen Retries fehlgeschlagen
-    return {"error": f"MCP connection failed after {max_retries} retries. Last error: {last_exception}"}
+    return {"error": "MCP connection failed"}
 
 
-def call_mcp_tool(tool_name: str, arguments: dict = None, max_retries: int = 3) -> str:
-    """Tool-Aufruf mit Retry."""
+def call_mcp_tool(tool_name: str, arguments: dict = None) -> str:
+    """Tool-Aufruf (ohne aggressive Retries)."""
     result = mcp_jsonrpc("tools/call", {
         "name": tool_name,
         "arguments": arguments or {}
-    }, max_retries=max_retries)
+    })
 
     if isinstance(result, dict) and "error" in result:
         return f"Error: {result['error']}"
