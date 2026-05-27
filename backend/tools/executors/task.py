@@ -59,17 +59,49 @@ def save_phase_progress(args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def get_phase_progress(args: Dict[str, Any]) -> Dict[str, Any]:
-    """Gibt alle gespeicherten Phase-Progress-Einträge der aktuellen Session zurück (neueste zuerst)."""
+    """
+    Gibt alle gespeicherten Phase-Progress-Einträge der aktuellen Session zurück.
+    Neueste Einträge zuerst. Optimiert für LongRunningAutonomous Resume-Checks.
+    """
     ctx = AgentContext.current()
-    memories = recall_memories(ctx.session_id, query="PHASE PROGRESS", limit=20)
-    
-    if not memories:
-        return {"content": [{"type": "text", "text": "No previous phase progress found."}]}
-    
-    # Saubere Formatierung für den Agenten
-    formatted = "\n\n".join([
-        f"**{m['fact'].split(chr(10))[0]}**\n{m['fact']}" 
-        for m in memories
-    ])
-    
-    return {"content": [{"type": "text", "text": formatted}]}
+
+    try:
+        # Suche gezielt nach Phase-Progress-Einträgen
+        memories = recall_memories(
+            session_id=ctx.session_id,
+            query="PHASE PROGRESS",
+            limit=25
+        )
+
+        if not memories:
+            return {
+                "content": [{
+                    "type": "text",
+                    "text": "No phase progress records found for this session."
+                }]
+            }
+
+        # Formatiere die Ergebnisse übersichtlich für den Agenten
+        formatted_entries = []
+        for mem in memories:
+            fact = mem.get("fact", "")
+            timestamp = mem.get("timestamp", "")
+            formatted_entries.append(f"[{timestamp}]\n{fact}")
+
+        result_text = "\n\n---\n\n".join(formatted_entries)
+
+        return {
+            "content": [{
+                "type": "text",
+                "text": f"**Phase Progress History ({len(memories)} entries):**\n\n{result_text}"
+            }]
+        }
+
+    except Exception as e:
+        return {
+            "content": [{
+                "type": "text",
+                "text": f"Error retrieving phase progress: {str(e)}"
+            }],
+            "isError": True
+        }
