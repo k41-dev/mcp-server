@@ -154,24 +154,39 @@ def _sanitize_history(history: list) -> list:
 def _chat_with_agent_generator(message: str, history: list, model_choice: str):
     tools = get_mcp_tools()
 
+    context_line = _get_context_line()
+
+    # Aktiven Skill sicher ermitteln (für Long-Running-Modus)
+    active_skill_name = ""
+    try:
+        skill_result = call_mcp_tool("get_active_skill", {})
+        if isinstance(skill_result, str):
+            data = json.loads(skill_result)
+            if isinstance(data, dict):
+                active_skill_name = data.get("name", "").lower().strip()
+    except Exception:
+        active_skill_name = ""
+
     if model_choice == "xAI":
         provider_name = "xai"
         model_display = os.getenv("XAI_MODEL")
         MAX_TURNS = 10 if active_skill_name == "long_running_autonomous" else 6
+
     elif model_choice == "OpenAI":
         provider_name = "openai"
         model_display = os.getenv("OPENAI_MODEL")
         MAX_TURNS = 10 if active_skill_name == "long_running_autonomous" else 6
+
     elif model_choice == "Anthropic":
         provider_name = "anthropic"
         model_display = os.getenv("ANTHROPIC_MODEL")
         MAX_TURNS = 8 if active_skill_name == "long_running_autonomous" else 5
-    else:
+
+    else:  # Ollama
         provider_name = "ollama"
         model_display = os.getenv("OLLAMA_MODEL")
         MAX_TURNS = 6 if active_skill_name == "long_running_autonomous" else 4
 
-    context_line = _get_context_line()
     messages, current_version = _prepare_messages(history, message, provider_name)
     tool_steps = []
 
