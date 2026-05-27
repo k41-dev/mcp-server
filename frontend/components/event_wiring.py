@@ -71,6 +71,30 @@ def set_skill_dropdown_to_active():
     return gr.update(value="None")
 
 
+def refresh_after_session_switch(model_choice):
+    """
+    Zentrale Refresh-Funktion nach einem Session-Wechsel.
+    Aktualisiert:
+    - Status Bar + System Prompt
+    - Persona & Skill Dropdowns
+    - Memory Box (Chat History)
+    """
+    # 1. Status Bar + System Prompt + aktive Persona/Skill Texte
+    status_updates = refresh_after_state_change(model_choice)
+
+    # 2. Persona Dropdown auf den in der Session gespeicherten Wert setzen
+    persona_update = set_persona_dropdown_to_active()
+
+    # 3. Skill Dropdown auf den in der Session gespeicherten Wert setzen
+    skill_update = set_skill_dropdown_to_active()
+
+    # 4. Memory Box mit der Chat History der neuen Session befüllen
+    memory_update = get_chat_history()
+
+    # Zusammenführen der Updates in der richtigen Reihenfolge
+    return status_updates + (persona_update, skill_update, memory_update)
+
+
 def refresh_after_state_change(model_choice):
     return refresh_ui_state(model_choice)
 
@@ -411,7 +435,7 @@ def wire_sessions_panel(
         inputs=[session_dropdown],
         outputs=[session_info]
     ).then(
-        refresh_after_state_change,
+        refresh_after_session_switch,
         inputs=[model_choice],
         outputs=[
             conn_status,
@@ -420,27 +444,9 @@ def wire_sessions_panel(
             active_skill,
             current_session,
             model_choice,
-            system_prompt_box
+            system_prompt_box,
+            persona_dropdown,    
+            skill_dropdown,
+            memory_box
         ]
-    ).then(
-        lambda: gr.update(value="Default"),
-        outputs=[persona_dropdown]
-    ).then(
-        lambda: gr.update(value="None"),
-        outputs=[skill_dropdown]
-    ).then(
-        load_initial_personas,
-        outputs=[persona_dropdown]
-    ).then(
-        load_initial_skills,
-        outputs=[skill_dropdown]
-    ).then(
-        get_chat_history,           
-        outputs=[memory_box]
-    ).then(
-        set_persona_dropdown_to_active,     
-        outputs=[persona_dropdown]
-    ).then(
-        set_skill_dropdown_to_active,   
-        outputs=[skill_dropdown]
     )
