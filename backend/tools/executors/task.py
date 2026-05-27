@@ -58,17 +58,19 @@ def save_phase_progress(args: Dict[str, Any]) -> Dict[str, Any]:
 
 def get_phase_progress(args: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Gibt alle gespeicherten Phase-Progress-Einträge der aktuellen Session zurück.
+    Gibt gespeicherte Phase-Progress-Einträge zurück.
+    Optional kann mit 'project' nach einem bestimmten Projekt gefiltert werden.
     """
-    from backend.memory import recall_memories   # ← Lazy Import (wichtig!)
+    from backend.memory import recall_memories
 
     ctx = AgentContext.current()
+    project_filter = args.get("project", "").strip().lower()
 
     try:
         memories = recall_memories(
             session_id=ctx.session_id,
             query="PHASE PROGRESS",
-            limit=25
+            limit=30
         )
 
         if not memories:
@@ -79,18 +81,38 @@ def get_phase_progress(args: Dict[str, Any]) -> Dict[str, Any]:
                 }]
             }
 
-        formatted_entries = []
+        # Optional filtern nach Projekt
+        if project_filter:
+            memories = [
+                m for m in memories 
+                if project_filter in m.get("fact", "").lower()
+            ]
+
+        if not memories:
+            return {
+                "content": [{
+                    "type": "text",
+                    "text": f"No phase progress records found for project '{project_filter}'."
+                }]
+            }
+
+        # Strukturierte Ausgabe
+        formatted = []
         for mem in memories:
             fact = mem.get("fact", "")
             timestamp = mem.get("timestamp", "")
-            formatted_entries.append(f"[{timestamp}]\n{fact}")
+            formatted.append({
+                "timestamp": timestamp,
+                "content": fact
+            })
 
-        result_text = "\n\n---\n\n".join(formatted_entries)
+        import json
+        result = json.dumps(formatted, ensure_ascii=False, indent=2)
 
         return {
             "content": [{
                 "type": "text",
-                "text": f"**Phase Progress History ({len(memories)} entries):**\n\n{result_text}"
+                "text": f"**Phase Progress Records ({len(formatted)} found):**\n\n{result}"
             }]
         }
 
