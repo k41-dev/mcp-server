@@ -56,3 +56,20 @@ def save_phase_progress(args: Dict[str, Any]) -> Dict[str, Any]:
             "text": f"✅ Phase progress saved (id={mem_id}) | Phase: {phase_name} | Status: {status}"
         }]
     }
+
+
+def get_phase_progress(args: Dict[str, Any]) -> Dict[str, Any]:
+    """Gibt alle gespeicherten Phase-Progress-Einträge der aktuellen Session zurück (neueste zuerst)."""
+    ctx = AgentContext.current()
+    memories = recall_memories(ctx.session_id, query="PHASE PROGRESS", limit=20)
+    
+    if not memories:
+        return {"content": [{"type": "text", "text": "No previous phase progress found."}]}
+    
+    # Saubere Formatierung für den Agenten
+    formatted = "\n\n".join([
+        f"**{m['fact'].split(chr(10))[0]}**\n{m['fact']}" 
+        for m in memories
+    ])
+    
+    return {"content": [{"type": "text", "text": formatted}]}

@@ -1,0 +1,10 @@
+{
+  "name": "get_phase_progress",
+  "description": "Returns all previously saved phase progress records for the current session (newest first). Ideal for resuming long-running autonomous tasks. Use this instead of generic recall_memory when working with LongRunningAutonomous.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "category": "task"
+}
