@@ -58,7 +58,6 @@ def switch_to_selected_session(selected_session: str):
 
 
 def create_sessions_panel():
-    """Erzeugt das komplette Sessions-Panel."""
     with gr.Accordion("📍 Sessions", open=False, elem_classes=["panel"]):
         session_dropdown = gr.Dropdown(
             label="Select Session",
@@ -67,25 +66,29 @@ def create_sessions_panel():
         )
 
         session_info = gr.Textbox(
-            label="Session Details",
+            label="Session Info",
             interactive=False,
             lines=4
         )
 
         with gr.Row():
-            refresh_btn = gr.Button("🔄 Refresh Sessions", size="sm")
-            switch_btn = gr.Button("Switch to Session", variant="primary", size="sm")
+            refresh_sessions_btn = gr.Button("🔄 Refresh", size="sm")
+            switch_session_btn = gr.Button("Switch Session", size="sm", variant="primary")
 
-    # Event Wiring (wird später in event_wiring.py zentralisiert)
-    session_dropdown.change(
-        fn=update_session_info,
-        inputs=[session_dropdown],
-        outputs=[session_info]
+        gr.Markdown("**Neue Session erstellen**")
+        with gr.Row():
+            new_session_name = gr.Textbox(
+                label="Session Name (optional)",
+                placeholder="z.B. Projekt XY",
+                scale=3
+            )
+            create_session_btn = gr.Button("Create Session", size="sm", variant="secondary")
+
+    return (
+        session_dropdown, 
+        session_info, 
+        refresh_sessions_btn, 
+        switch_session_btn,
+        new_session_name,           # ← neu
+        create_session_btn          # ← neu
     )
-
-    refresh_btn.click(
-        fn=lambda: gr.update(choices=get_session_choices()),
-        outputs=[session_dropdown]
-    )
-
-    return session_dropdown, session_info, refresh_btn, switch_btn

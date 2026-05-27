@@ -42,6 +42,12 @@ from components.memory_panel import (
     full_reset,
 )
 
+from components.sessions_panel import (
+    get_session_choices,
+    update_session_info,
+    switch_to_selected_session,
+)
+
 
 def sync_dropdown_to_active_state(component: str):
     """
@@ -89,6 +95,36 @@ def refresh_after_session_switch(model_choice):
     memory_update = get_chat_history()
 
     return status_updates + (persona_update, skill_update, memory_update)
+
+
+# ====================== CREATE SESSION ======================
+def create_and_switch_to_new_session(name: str):
+    """Erstellt eine neue Session und wechselt automatisch dorthin."""
+    name = name.strip() if name else None
+
+    # Session erstellen
+    result = call_mcp_tool("create_session", {"name": name} if name else {})
+
+    if isinstance(result, str) and "Error" in result:
+        return result
+
+    # Aktuelle Sessions laden und die neueste holen
+    sessions_json = call_mcp_tool("list_sessions", {})
+    new_session_id = None
+
+    if isinstance(sessions_json, str):
+        try:
+            session_list = json.loads(sessions_json)
+            if session_list:
+                new_session_id = session_list[0]["session_id"]
+        except Exception:
+            pass
+
+    if new_session_id:
+        # Direkt zur neuen Session wechseln
+        call_mcp_tool("switch_session", {"session_id": new_session_id})
+
+    return result
 
 
 def refresh_after_state_change(model_choice):
@@ -401,7 +437,9 @@ def wire_sessions_panel(
     system_prompt_box,
     persona_dropdown,      
     skill_dropdown,
-    memory_box        
+    memory_box,
+    new_session_name,
+    create_session_btn,        
 ):
     """Verdrahtet das Sessions-Panel mit automatischer Status-Aktualisierung."""
 
@@ -443,6 +481,37 @@ def wire_sessions_panel(
             system_prompt_box,
             persona_dropdown,    
             skill_dropdown,
+            memory_box,
+        ]
+    )
+
+    # === NEU: Session erstellen ===
+    def create_new_session(name):
+        name = name.strip() if name else None
+        result = call_mcp_tool("create_session", {"name": name} if name else {})
+        return result
+
+    create_session_btn.click(
+        fn=create_and_switch_to_new_session,
+        inputs=[new_session_name],
+        outputs=[session_info]
+    ).then(
+        # Nach erfolgreichem Erstellen + Wechsel → zentrale Refresh-Funktion nutzen
+        refresh_after_session_switch,
+        inputs=[model_choice],
+        outputs=[
+            conn_status,
+            prompt_version,
+            active_persona,
+            active_skill,
+            current_session,
+            model_choice,
+            system_prompt_box,
+            persona_dropdown,
+            skill_dropdown,
             memory_box
         ]
+    ).then(
+        lambda: "",   # Namensfeld leeren
+        outputs=[new_session_name]
     )
