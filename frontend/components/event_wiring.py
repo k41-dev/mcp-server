@@ -8,10 +8,12 @@ Kein Backend-Import, keine toten Imports, keine Redundanzen.
 """
 
 import gradio as gr
+import json
 
 # === Zentrale Refresh-Funktion ===
 from .chat_handler import refresh_ui_state, respond, switch_model_provider
 from components.memory_panel import get_chat_history
+from components.mcp_client import call_mcp_tool
 
 # === Handler Imports ===
 from components.persona_control import (
@@ -39,6 +41,34 @@ from components.memory_panel import (
     clear_chat_history,
     full_reset,
 )
+
+
+def set_persona_dropdown_to_active():
+    """Setzt das Persona-Dropdown auf die aktuell aktive Persona der Session."""
+    result = call_mcp_tool("get_active_persona", {})
+    if isinstance(result, str):
+        try:
+            data = json.loads(result)
+            if isinstance(data, dict) and "name" in data:
+                name = data["name"]
+                return gr.update(value=name)
+        except Exception:
+            pass
+    return gr.update(value="Default")
+
+
+def set_skill_dropdown_to_active():
+    """Setzt das Skill-Dropdown auf den aktuell aktiven Skill der Session."""
+    result = call_mcp_tool("get_active_skill", {})
+    if isinstance(result, str):
+        try:
+            data = json.loads(result)
+            if isinstance(data, dict) and "name" in data:
+                name = data["name"]
+                return gr.update(value=name)
+        except Exception:
+            pass
+    return gr.update(value="None")
 
 
 def refresh_after_state_change(model_choice):
@@ -407,4 +437,10 @@ def wire_sessions_panel(
     ).then(
         get_chat_history,           
         outputs=[memory_box]
+    ).then(
+        set_persona_dropdown_to_active,     
+        outputs=[persona_dropdown]
+    ).then(
+        set_skill_dropdown_to_active,   
+        outputs=[skill_dropdown]
     )
