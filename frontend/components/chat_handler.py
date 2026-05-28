@@ -110,6 +110,27 @@ def _build_tool_status_message(model_display: str, context_line: str, tool_names
     )
 
 
+# ====================== HELPER ======================
+def _save_final_assistant_message(content: str, tool_steps: list, tool_calls: list, context_line: str = ""):
+    """
+    Speichert die finale Assistant-Antwort und hängt bei Tool-Nutzung einen Marker an.
+    Dadurch bleibt nach Session-Wechsel sichtbar, dass Tools verwendet wurden.
+    """
+    from .mcp_client import call_mcp_tool
+
+    final_content = (content or "").strip()
+
+    # Marker anhängen, wenn Tools in diesem Turn verwendet wurden
+    if tool_steps or tool_calls:
+        if final_content:
+            final_content += "\n\n[🔧 Tools wurden in dieser Antwort verwendet]"
+        else:
+            final_content = "[🔧 Tools wurden in dieser Antwort verwendet]"
+
+    if final_content:
+        call_mcp_tool("add_chat_turn", {"role": "assistant", "content": final_content})
+
+
 def _prepare_messages(history: list, user_message: str, provider: str = "grok"):
     clean_history = _sanitize_history(history)
 
@@ -247,8 +268,13 @@ def _chat_with_agent_generator(message: str, history: list, model_choice: str):
             if tool_steps:
                 final_msg += "\n\n" + "\n".join(tool_steps)
 
-            if content:
-                call_mcp_tool("add_chat_turn", {"role": "assistant", "content": content})
+            # Sauberes Speichern mit Tool-Marker (über Hilfsfunktion)
+            _save_final_assistant_message(
+                content=content,
+                tool_steps=tool_steps,
+                tool_calls=tool_calls,
+                context_line=context_line
+            )
 
             base_history = history + [{"role": "user", "content": message}]
             for partial in _stream_final_answer(base_history, final_msg):
