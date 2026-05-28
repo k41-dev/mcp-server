@@ -58,23 +58,25 @@ def save_phase_progress(args: Dict[str, Any]) -> Dict[str, Any]:
 
 def get_phase_progress(args: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Gibt gespeicherte Phase-Progress-Einträge zurück.
-    Optional kann mit 'project' nach einem bestimmten Projekt gefiltert werden.
+    Gibt alle gespeicherten Phase-Progress-Einträge der aktuellen Session zurück.
+    Optional kann nach einem Projekt gefiltert werden.
     """
     from backend.memory import recall_memories
 
     ctx = AgentContext.current()
 
-    project = args.get("project", "").strip()          # NEU
+    # Optionaler Project-Filter
+    project = args.get("project", "").strip() if args else ""
+
     query = "PHASE PROGRESS"
     if project:
-        query = f"PHASE PROGRESS {project}
+        query = f"PHASE PROGRESS {project}"
 
     try:
         memories = recall_memories(
             session_id=ctx.session_id,
             query=query,
-            limit=25
+            limit=30
         )
 
         if not memories:
@@ -85,38 +87,18 @@ def get_phase_progress(args: Dict[str, Any]) -> Dict[str, Any]:
                 }]
             }
 
-        # Optional filtern nach Projekt
-        if project_filter:
-            memories = [
-                m for m in memories 
-                if project_filter in m.get("fact", "").lower()
-            ]
-
-        if not memories:
-            return {
-                "content": [{
-                    "type": "text",
-                    "text": f"No phase progress records found for project '{project_filter}'."
-                }]
-            }
-
-        # Strukturierte Ausgabe
-        formatted = []
+        formatted_entries = []
         for mem in memories:
             fact = mem.get("fact", "")
             timestamp = mem.get("timestamp", "")
-            formatted.append({
-                "timestamp": timestamp,
-                "content": fact
-            })
+            formatted_entries.append(f"[{timestamp}]\n{fact}")
 
-        import json
-        result = json.dumps(formatted, ensure_ascii=False, indent=2)
+        result_text = "\n\n---\n\n".join(formatted_entries)
 
         return {
             "content": [{
                 "type": "text",
-                "text": f"**Phase Progress Records ({len(formatted)} found):**\n\n{result}"
+                "text": f"**Phase Progress History ({len(memories)} entries):**\n\n{result_text}"
             }]
         }
 
