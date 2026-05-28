@@ -201,17 +201,26 @@ def refresh_after_state_change(model_choice):
 
 
 def load_chat_history_for_current_session():
-    """Lädt die Chat-History der aktuellen Session im korrekten Gradio-Format."""
     from .mcp_client import call_mcp_tool
     import json
 
-    result = call_mcp_tool("list_chat_history", {"limit": 50, "format": "gradio"})
+    result = call_mcp_tool("list_chat_history", {"limit": 60, "format": "gradio"})
 
     if isinstance(result, str):
         try:
             data = json.loads(result)
             if isinstance(data, list):
-                return data
+                # Tool-Nachrichten etwas schöner darstellen (falls sie durchkommen)
+                cleaned = []
+                for msg in data:
+                    if msg.get("role") == "tool":
+                        cleaned.append({
+                            "role": "assistant",
+                            "content": "[Tool result received]"
+                        })
+                    else:
+                        cleaned.append(msg)
+                return cleaned
         except Exception:
             pass
     return []

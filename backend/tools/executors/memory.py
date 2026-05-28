@@ -83,8 +83,13 @@ def clear_chat_history(args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def list_chat_history(args: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Listet die Chat-History der aktuellen Session auf.
+    Unterstützt format="text" (für Memory Panel) und format="gradio" (für Chatbot).
+    Bei format="gradio" werden Tool-Aufrufe erkannt und als Hinweis angezeigt.
+    """
     ctx = AgentContext.current()
-    limit = args.get("limit", 30)
+    limit = args.get("limit", 40)
     fmt = args.get("format", "text").lower()
 
     messages = get_recent_messages(ctx.session_id, limit)
@@ -94,10 +99,59 @@ def list_chat_history(args: Dict[str, Any]) -> Dict[str, Any]:
             return {"content": [{"type": "text", "text": "[]"}]}
         return {"content": [{"type": "text", "text": "No chat history."}]}
 
+    # ====================== GRADIO FORMAT ======================
     if fmt == "gradio":
-        # Sauberes Format für Gradio Chatbot
         import json
-        history = [{"role": m["role"], "content": m["content"]} for m in messages]
+
+        history = []
+        i = 0
+        while i < len(messages):
+            msg = messages[i]
+
+            # Assistant-Nachricht mit nachfolgenden Tool-Results erkennen
+            if msg["role"] == "assistant":
+                content = msg.get("content", "") or ""
+
+                # Prüfen, ob direkt danach Tool-Results kommen
+                has_tool_calls = False
+                j = i + 1
+                while j < len(messages) and messages[j]["role"] == "tool":
+                    has_tool_calls = True
+                    j += 1
+
+                if has_tool_calls:
+                    # Marker anhängen, damit Tool-Nutzung sichtbar bleibt
+                    if content.strip():
+                        content = content.strip() + "\n\n[🔧 Tools wurden in dieser Antwort verwendet]"
+                    else:
+                        content = "[🔧 Tools wurden in dieser Antwort verwendet]"
+
+                history.append({"role": "assistant", "content": content})
+                i = j
+                continue
+
+            # Normale User-Nachrichten
+            elif msg["role"] == "user":
+                history.append({
+                    "role": "user",
+                    "content": msg.get("content", "")
+                })
+                i += 1
+                continue
+
+            # Tool-Results überspringen (werden bereits über den Marker oben abgedeckt)
+            elif msg["role"] == "tool":
+                i += 1
+                continue
+
+            else:
+                # Fallback für unbekannte Rollen
+                history.append({
+                    "role": msg.get("role", "assistant"),
+                    "content": msg.get("content", "")
+                })
+                i += 1
+
         return {
             "content": [{
                 "type": "text",
@@ -105,7 +159,7 @@ def list_chat_history(args: Dict[str, Any]) -> Dict[str, Any]:
             }]
         }
 
-    # Bestehender Text-Modus (für memory_box) bleibt unverändert
+    # ====================== TEXT FORMAT (Standard) ======================
     text = "\n".join([f"{m['role']}: {m['content'][:120]}" for m in messages])
     return {"content": [{"type": "text", "text": text}]}
 
