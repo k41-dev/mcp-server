@@ -49,6 +49,10 @@ def execute_skill(args: Dict[str, Any]) -> Dict[str, Any]:
     ctx = AgentContext.current()
     _set_active_skill(skill_name, content, session_id=ctx.session_id)
 
+    # === Leichtes Debug ===
+    print(f"[SKILL DEBUG] execute_skill erfolgreich: '{skill_name}' → Session {ctx.session_id}")
+    # === Ende Debug ===
+
     return {
         "content": [{
             "type": "text",
