@@ -524,6 +524,7 @@ def wire_sessions_panel(
     persona_dropdown,      
     skill_dropdown,
     memory_box,
+    chatbot,
     new_session_name,
     create_session_btn,
     delete_session_btn,        
