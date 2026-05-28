@@ -114,33 +114,29 @@ def _build_tool_status_message(model_display: str, context_line: str, tool_names
 def _save_final_assistant_message(content: str, tool_steps: list, tool_calls: list, context_line: str = ""):
     """
     Speichert die finale Assistant-Antwort.
-    Bei Tool-Nutzung wird ein Marker mit den tatsächlich verwendeten Tools angehängt.
+    Bei Tool-Nutzung werden die Tool-Namen sauber am Ende der Nachricht gespeichert,
+    damit sie nach einem Session-Wechsel wiederhergestellt werden können.
     """
     from .mcp_client import call_mcp_tool
 
     final_content = (content or "").strip()
 
     if tool_steps or tool_calls:
-        # Tool-Namen aus tool_steps extrahieren (z.B. aus "🔧 `get_phase_progress`")
-        used_tools = []
+        # Saubere Liste der verwendeten Tools extrahieren
+        used_tools = set()
         for step in tool_steps:
-            # Extrahiert den Tool-Namen aus dem formatierten String
             if "`" in step:
                 tool_name = step.split("`")[1]
-                used_tools.append(tool_name)
+                used_tools.add(tool_name)
             else:
-                used_tools.append(step.replace("🔧 ", "").strip())
+                clean = step.replace("🔧 ", "").strip()
+                if clean:
+                    used_tools.add(clean)
 
         if used_tools:
-            tools_str = ", ".join(used_tools)
-            marker = f"\n\n[🔧 Tools: {tools_str}]"
-        else:
-            marker = "\n\n[🔧 Tools wurden in dieser Antwort verwendet]"
-
-        if final_content:
-            final_content += marker
-        else:
-            final_content = marker.strip()
+            tools_list = ",".join(sorted(used_tools))
+            # Strukturierter Marker (wird später beim Laden erkannt)
+            final_content += f"\n\n<!--TOOL_USAGE:{tools_list}-->"
 
     if final_content:
         call_mcp_tool("add_chat_turn", {"role": "assistant", "content": final_content})

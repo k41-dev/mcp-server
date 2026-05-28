@@ -101,63 +101,52 @@ def list_chat_history(args: Dict[str, Any]) -> Dict[str, Any]:
 
     # ====================== GRADIO FORMAT ======================
     if fmt == "gradio":
-        import json
+    import json
+    import re
 
-        history = []
-        i = 0
-        while i < len(messages):
-            msg = messages[i]
+    history = []
+    i = 0
+    while i < len(messages):
+        msg = messages[i]
+        content = msg.get("content", "") or ""
 
-            # Assistant-Nachricht mit nachfolgenden Tool-Results erkennen
-            if msg["role"] == "assistant":
-                content = msg.get("content", "") or ""
+        # Tool-Usage Marker erkennen und in separate Einträge umwandeln
+        tool_match = re.search(r"<!--TOOL_USAGE:(.*?)-->", content)
+        if tool_match:
+            tools_str = tool_match.group(1)
+            tool_names = [t.strip() for t in tools_str.split(",") if t.strip()]
 
-                # Prüfen, ob direkt danach Tool-Results kommen
-                has_tool_calls = False
-                j = i + 1
-                while j < len(messages) and messages[j]["role"] == "tool":
-                    has_tool_calls = True
-                    j += 1
+            # Marker aus dem eigentlichen Content entfernen
+            clean_content = re.sub(r"\n*<!--TOOL_USAGE:.*?-->", "", content).strip()
 
-                if has_tool_calls:
-                    # Marker anhängen, damit Tool-Nutzung sichtbar bleibt
-                    if content.strip():
-                        content = content.strip() + "\n\n[🔧 Tools wurden in dieser Antwort verwendet]"
-                    else:
-                        content = "[🔧 Tools wurden in dieser Antwort verwendet]"
+            if clean_content:
+                history.append({"role": "assistant", "content": clean_content})
 
-                history.append({"role": "assistant", "content": content})
-                i = j
-                continue
-
-            # Normale User-Nachrichten
-            elif msg["role"] == "user":
+            # Tool-Aufrufe als separate, saubere Zeilen hinzufügen
+            for tool_name in tool_names:
                 history.append({
-                    "role": "user",
-                    "content": msg.get("content", "")
+                    "role": "assistant",
+                    "content": f"🔧 `{tool_name}`"
                 })
-                i += 1
-                continue
 
-            # Tool-Results überspringen (werden bereits über den Marker oben abgedeckt)
-            elif msg["role"] == "tool":
-                i += 1
-                continue
+            i += 1
+            continue
 
-            else:
-                # Fallback für unbekannte Rollen
-                history.append({
-                    "role": msg.get("role", "assistant"),
-                    "content": msg.get("content", "")
-                })
-                i += 1
+        # Normale Nachrichten
+        if msg["role"] in ("user", "assistant"):
+            history.append({
+                "role": msg["role"],
+                "content": content
+            })
 
-        return {
-            "content": [{
-                "type": "text",
-                "text": json.dumps(history, ensure_ascii=False)
-            }]
-        }
+        i += 1
+
+    return {
+        "content": [{
+            "type": "text",
+            "text": json.dumps(history, ensure_ascii=False)
+        }]
+    }
 
     # ====================== TEXT FORMAT (Standard) ======================
     text = "\n".join([f"{m['role']}: {m['content'][:120]}" for m in messages])
