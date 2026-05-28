@@ -83,14 +83,29 @@ def clear_chat_history(args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def list_chat_history(args: Dict[str, Any]) -> Dict[str, Any]:
-    """Listet die Chat-History der aktuellen Session auf."""
     ctx = AgentContext.current()
-    limit = args.get("limit", 20)
+    limit = args.get("limit", 30)
+    fmt = args.get("format", "text").lower()
+
     messages = get_recent_messages(ctx.session_id, limit)
 
     if not messages:
+        if fmt == "gradio":
+            return {"content": [{"type": "text", "text": "[]"}]}
         return {"content": [{"type": "text", "text": "No chat history."}]}
 
+    if fmt == "gradio":
+        # Sauberes Format für Gradio Chatbot
+        import json
+        history = [{"role": m["role"], "content": m["content"]} for m in messages]
+        return {
+            "content": [{
+                "type": "text",
+                "text": json.dumps(history, ensure_ascii=False)
+            }]
+        }
+
+    # Bestehender Text-Modus (für memory_box) bleibt unverändert
     text = "\n".join([f"{m['role']}: {m['content'][:120]}" for m in messages])
     return {"content": [{"type": "text", "text": text}]}
 

@@ -200,6 +200,23 @@ def refresh_after_state_change(model_choice):
     return refresh_ui_state(model_choice)
 
 
+def load_chat_history_for_current_session():
+    """Lädt die Chat-History der aktuellen Session im korrekten Gradio-Format."""
+    from .mcp_client import call_mcp_tool
+    import json
+
+    result = call_mcp_tool("list_chat_history", {"limit": 50, "format": "gradio"})
+
+    if isinstance(result, str):
+        try:
+            data = json.loads(result)
+            if isinstance(data, list):
+                return data
+        except Exception:
+            pass
+    return []
+
+
 def wire_persona_controls(
     persona_dropdown,
     intensity_slider,
@@ -558,6 +575,9 @@ def wire_sessions_panel(
             skill_dropdown,
             memory_box
         ]
+    ).then(
+        load_chat_history_for_current_session,
+        outputs=[chatbot]         
     )
 
     # === NEU: Session erstellen ===
