@@ -86,10 +86,12 @@ def list_chat_history(args: Dict[str, Any]) -> Dict[str, Any]:
     """
     Listet die Chat-History der aktuellen Session auf.
     Unterstützt format="text" (für Memory Panel) und format="gradio" (für Chatbot).
-    Bei format="gradio" werden Tool-Aufrufe erkannt und als Hinweis angezeigt.
+    
+    Bei format="gradio" werden gespeicherte Tool-Aufrufe erkannt und als
+    separate, saubere Zeilen dargestellt (ähnlich wie im Live-Chat).
     """
     ctx = AgentContext.current()
-    limit = args.get("limit", 40)
+    limit = args.get("limit", 50)
     fmt = args.get("format", "text").lower()
 
     messages = get_recent_messages(ctx.session_id, limit)
@@ -101,54 +103,58 @@ def list_chat_history(args: Dict[str, Any]) -> Dict[str, Any]:
 
     # ====================== GRADIO FORMAT ======================
     if fmt == "gradio":
-    import json
-    import re
+        import json
+        import re
 
-    history = []
-    i = 0
-    while i < len(messages):
-        msg = messages[i]
-        content = msg.get("content", "") or ""
+        history = []
+        i = 0
+        while i < len(messages):
+            msg = messages[i]
+            content = msg.get("content", "") or ""
 
-        # Tool-Usage Marker erkennen und in separate Einträge umwandeln
-        tool_match = re.search(r"<!--TOOL_USAGE:(.*?)-->", content)
-        if tool_match:
-            tools_str = tool_match.group(1)
-            tool_names = [t.strip() for t in tools_str.split(",") if t.strip()]
+            # === Tool Usage Marker erkennen ===
+            tool_match = re.search(r"<!--TOOL_USAGE:(.*?)-->", content)
 
-            # Marker aus dem eigentlichen Content entfernen
-            clean_content = re.sub(r"\n*<!--TOOL_USAGE:.*?-->", "", content).strip()
+            if tool_match:
+                tools_str = tool_match.group(1)
+                tool_names = [t.strip() for t in tools_str.split(",") if t.strip()]
 
-            if clean_content:
-                history.append({"role": "assistant", "content": clean_content})
+                # Marker aus dem eigentlichen Content entfernen
+                clean_content = re.sub(r"\n*<!--TOOL_USAGE:.*?-->", "", content).strip()
 
-            # Tool-Aufrufe als separate, saubere Zeilen hinzufügen
-            for tool_name in tool_names:
+                if clean_content:
+                    history.append({
+                        "role": "assistant",
+                        "content": clean_content
+                    })
+
+                # Tool-Aufrufe als separate, saubere Zeilen einfügen
+                for tool_name in tool_names:
+                    history.append({
+                        "role": "assistant",
+                        "content": f"🔧 `{tool_name}`"
+                    })
+
+                i += 1
+                continue
+
+            # Normale User- und Assistant-Nachrichten
+            if msg["role"] in ("user", "assistant"):
                 history.append({
-                    "role": "assistant",
-                    "content": f"🔧 `{tool_name}`"
+                    "role": msg["role"],
+                    "content": content
                 })
 
             i += 1
-            continue
 
-        # Normale Nachrichten
-        if msg["role"] in ("user", "assistant"):
-            history.append({
-                "role": msg["role"],
-                "content": content
-            })
+        return {
+            "content": [{
+                "type": "text",
+                "text": json.dumps(history, ensure_ascii=False)
+            }]
+        }
 
-        i += 1
-
-    return {
-        "content": [{
-            "type": "text",
-            "text": json.dumps(history, ensure_ascii=False)
-        }]
-    }
-
-    # ====================== TEXT FORMAT (Standard) ======================
+    # ====================== TEXT FORMAT (Standard für Memory Panel) ======================
     text = "\n".join([f"{m['role']}: {m['content'][:120]}" for m in messages])
     return {"content": [{"type": "text", "text": text}]}
 
