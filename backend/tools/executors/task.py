@@ -64,13 +64,17 @@ def get_phase_progress(args: Dict[str, Any]) -> Dict[str, Any]:
     from backend.memory import recall_memories
 
     ctx = AgentContext.current()
-    project_filter = args.get("project", "").strip().lower()
+
+    project = args.get("project", "").strip()          # NEU
+    query = "PHASE PROGRESS"
+    if project:
+        query = f"PHASE PROGRESS {project}
 
     try:
         memories = recall_memories(
             session_id=ctx.session_id,
-            query="PHASE PROGRESS",
-            limit=30
+            query=query,
+            limit=25
         )
 
         if not memories:
