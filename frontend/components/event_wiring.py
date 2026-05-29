@@ -200,9 +200,10 @@ def refresh_after_state_change(model_choice):
     return refresh_ui_state(model_choice)
 
 
-def load_chat_history_for_current_session():
+ddef load_chat_history_for_current_session():
+    """Lädt die History RO H ohne jegliche Header-Manipulation.
+    Header wird nur bei neuen Nachrichten gesetzt."""
     from .mcp_client import call_mcp_tool
-    from .chat_handler import _build_response_header
     import json
 
     result = call_mcp_tool("list_chat_history", {"limit": 60, "format": "gradio"})
@@ -211,41 +212,8 @@ def load_chat_history_for_current_session():
         try:
             data = json.loads(result)
             if isinstance(data, list):
-                cleaned = []
-                header = _build_response_header()
-
-                for msg in data:
-                    if msg.get("role") == "tool":
-                        cleaned.append({
-                            "role": "assistant",
-                            "content": "[Tool result received]"
-                        })
-                    elif msg.get("role") == "assistant":
-                        content = str(msg.get("content", "")).strip()
-
-                        lines = content.split("\n")
-
-                        # Entferne nur die ersten 1-2 Zeilen, wenn sie wie unser Header aussehen
-                        start = 0
-                        if lines and lines[0].strip().startswith("**"):
-                            start = 1
-                            # Falls direkt danach eine Context-Zeile kommt (*🎭 / *🛠️ / *📍)
-                            if len(lines) > 1 and lines[1].strip().startswith(("*🎭", "*🛠️", "*📍")):
-                                start = 2
-
-                        cleaned_content = "\n".join(lines[start:]).strip()
-
-                        # Immer exakt einen sauberen Header oben setzen
-                        final_content = f"{header}\n\n{cleaned_content}".strip()
-
-                        cleaned.append({
-                            "role": "assistant",
-                            "content": final_content
-                        })
-                    else:
-                        cleaned.append(msg)
-
-                return cleaned
+                # Kein Cleaning, keine Header-Logik mehr
+                return data
         except Exception:
             pass
     return []
