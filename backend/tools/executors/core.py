@@ -353,6 +353,7 @@ def list_tools_by_category(args: Dict[str, Any]) -> Dict[str, Any]:
 def set_active_provider(args: Dict[str, Any]) -> Dict[str, Any]:
     """Setzt den aktiven Provider (xai, ollama, openai oder anthropic)."""
     from backend.tools.state import set_active_provider as _set_active_provider
+    from backend.tools.context import AgentContext
 
     # Unterstützt beide möglichen Keys (alter + neuer Name)
     provider_name = args.get("provider") or args.get("model", "")
@@ -370,19 +371,24 @@ def set_active_provider(args: Dict[str, Any]) -> Dict[str, Any]:
             "isError": True
         }
 
-    _set_active_provider(provider_name)   # nutzt Default-Session
+    ctx = AgentContext.current()
+    _set_active_provider(provider_name, session_id=ctx.session_id)
+
     return {
-        "content": [{"type": "text", "text": f"✅ Active provider set to: {provider_name}"}]
+        "content": [{"type": "text", "text": f"✅ Active provider set to: {provider_name} in Session {ctx.session_id}"}]
     }
 
 
 def get_active_provider(args: Dict[str, Any]) -> Dict[str, Any]:
     """Gibt den aktuell aktiven Provider zurück."""
     from backend.tools.state import get_active_provider as _get_active_provider
+    from backend.tools.context import AgentContext
     import json
 
     try:
-        provider = _get_active_provider()   # Default-Session
+        ctx = AgentContext.current()
+        provider = _get_active_provider(session_id=ctx.session_id)
+
         if provider:
             return {
                 "content": [{"type": "text", "text": json.dumps({"active_provider": provider})}]
@@ -416,10 +422,13 @@ def clear_active_provider(args: Dict[str, Any]) -> Dict[str, Any]:
 def get_active_model(args: Dict[str, Any]) -> Dict[str, Any]:
     """Gibt das aktuell aktive Modell (konkreter Name aus Settings) zurück."""
     from backend.tools.state import get_active_model as _get_active_model
+    from backend.tools.context import AgentContext
     import json
 
     try:
-        model = _get_active_model()
+        ctx = AgentContext.current()
+        model = _get_active_model(session_id=ctx.session_id)
+
         if model:
             return {
                 "content": [{"type": "text", "text": json.dumps({"active_model": model})}]

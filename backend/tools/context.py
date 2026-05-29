@@ -153,9 +153,6 @@ class AgentContext:
 
         context = session_data.get("context", {}) or {}
 
-        # Merke den aktuell aktiven Provider, bevor wir clearen
-        current_provider = _get_active_provider(session_id=self.session_id)
-
         clear_active_persona(session_id=self.session_id)
         clear_active_skill(session_id=self.session_id)
         clear_active_provider(session_id=self.session_id)
@@ -167,12 +164,8 @@ class AgentContext:
             # Es gibt einen gespeicherten Provider → diesen wiederherstellen
             set_active_provider(saved_provider, session_id=session_id)
         else:
-            # Kein Provider in der Session gespeichert → den vorherigen beibehalten
-            if current_provider:
-                set_active_provider(current_provider, session_id=session_id)
-            else:
-                # Fallback auf Default (sollte eigentlich nie nötig sein)
-                set_active_provider("xai", session_id=session_id)
+            # Kein Provider in dieser Session gespeichert → sauber auf Default
+            set_active_provider("xai", session_id=session_id)
 
         # Persona & Skill wie bisher
         if context.get("persona"):
