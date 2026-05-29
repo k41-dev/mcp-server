@@ -16,6 +16,41 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 
 # ====================== HELPER ======================
+def _build_response_header() -> str:
+    """Erzeugt immer eine saubere Header-Zeile mit Model + Context.
+    Wird direkt vor dem Senden einer Assistant-Antwort aufgerufen.
+    """
+    model_display = "llama3.1:latest"  # Fallback
+    context_line = ""
+
+    try:
+        # Aktuellen Provider + Model holen
+        provider_result = call_mcp_tool("get_active_provider", {})
+        if isinstance(provider_result, str):
+            data = json.loads(provider_result)
+            prov = data.get("active_provider", "xai").lower()
+
+            model_map = {
+                "xai": os.getenv("XAI_MODEL", "grok"),
+                "ollama": os.getenv("OLLAMA_MODEL", "llama3.1:latest"),
+                "openai": os.getenv("OPENAI_MODEL", "gpt-4o"),
+                "anthropic": os.getenv("ANTHROPIC_MODEL", "claude"),
+            }
+            model_display = model_map.get(prov, model_display)
+
+        # Context-Line holen
+        context_line = _get_context_line()
+
+    except Exception:
+        pass
+
+    header = f"**{model_display}**"
+    if context_line and context_line.strip():
+        header += f"\n*{context_line}*"
+
+    return header
+
+
 def _get_context_line() -> str:
     """Holt aktive Persona + Skill + aktuelle Session und baut eine saubere Context-Line.
     Zeigt immer mindestens die Session. Persona und Skill nur, wenn sie wirklich aktiv sind.
@@ -293,13 +328,9 @@ def _chat_with_agent_generator(message: str, history: list, model_choice: str):
 
                 continue
 
-            # === Finale Antwort mit garantierter Überschrift ===
-            header = f"**{model_display}**"
-            if context_line and context_line.strip():
-                header += f"\n*{context_line}*"
-
-            final_msg = header
-            final_msg += f"\n\n{content or ''}"
+            # Finale Antwort mit zentraler Header-Funktion
+            header = _build_response_header()
+            final_msg = header + f"\n\n{content or ''}"
 
             if tool_steps:
                 final_msg += "\n\n" + "\n".join(tool_steps)
@@ -428,18 +459,16 @@ def chat_with_agent_streaming(message: str, history: list, model_choice: str):
                     if (len(chunk_buffer) >= update_every or 
                         content.endswith((" ", "\n", ".", "!", "?", ":", ";"))):
 
-                        display_content = full_response
-                        if context_line:
-                            display_content = f"**{model_display}**\n*{context_line}*\n\n{full_response}"
+                        header = _build_response_header()
+                        display_content = f"{header}\n\n{full_response}"
 
                         chat_history[assistant_index]["content"] = display_content + "▌"
                         yield chat_history
                         chunk_buffer = ""
                         time.sleep(0.012)
 
-        final_content = full_response
-        if context_line:
-            final_content = f"**{model_display}**\n*{context_line}*\n\n{full_response}"
+        header = _build_response_header()
+        final_content = f"{header}\n\n{full_response}"
 
         if assistant_index is not None:
             chat_history[assistant_index]["content"] = final_content
