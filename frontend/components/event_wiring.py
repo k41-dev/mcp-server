@@ -204,6 +204,7 @@ def load_chat_history_for_current_session():
     from .mcp_client import call_mcp_tool
     from .chat_handler import _build_response_header
     import json
+    import re
 
     result = call_mcp_tool("list_chat_history", {"limit": 60, "format": "gradio"})
 
@@ -221,25 +222,20 @@ def load_chat_history_for_current_session():
                             "content": "[Tool result received]"
                         })
                     elif msg.get("role") == "assistant":
-                        content = str(msg.get("content", "")).strip()
+                        content = str(msg.get("content", ""))
 
-                        # === Robuste Bereinigung alter Header ===
-                        lines = content.split("\n")
+                        # === Aggressive Reinigung: Alle alten Header-Strukturen entfernen ===
+                        # Entferne **...** Blöcke (auch mehrzeilig)
+                        content = re.sub(r'\*\*.*?\*\*', '', content, flags=re.DOTALL)
+                        # Entferne Context-Zeilen (*🎭 ...*, *🛠️ ...*, *📍 ...)
+                        content = re.sub(r'\n?\*🎭.*?\*', '', content)
+                        content = re.sub(r'\n?\*🛠️.*?\*', '', content)
+                        content = re.sub(r'\n?\*📍.*?\*', '', content)
 
-                        # Überspringe alle Zeilen am Anfang, die wie Header aussehen
-                        start_index = 0
-                        for i, line in enumerate(lines):
-                            line_stripped = line.strip()
-                            if line_stripped.startswith("**") or line_stripped.startswith("*🎭") or line_stripped.startswith("*🛠️") or line_stripped.startswith("*📍"):
-                                start_index = i + 1
-                            else:
-                                break
-
-                        # Restlichen Content ohne alten Header
-                        cleaned_content = "\n".join(lines[start_index:]).strip()
+                        content = content.strip()
 
                         # Immer exakt einen sauberen Header oben setzen
-                        final_content = f"{header}\n\n{cleaned_content}".strip()
+                        final_content = f"{header}\n\n{content}".strip()
 
                         cleaned.append({
                             "role": "assistant",
