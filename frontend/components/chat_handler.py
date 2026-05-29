@@ -613,21 +613,8 @@ def respond(user_message, chat_history, model):
         yield temp_history, ""
 
         final_history = None
-
         for partial_history in _chat_with_agent_generator(user_message, chat_history, model):
             final_history = partial_history
-
-            # ============================================================
-            # ZENTRALE HEADER-KORREKTUR (vor jedem Yield)
-            # ============================================================
-            if partial_history and len(partial_history) > 0:
-                last_msg = partial_history[-1]
-                if last_msg.get("role") == "assistant":
-                    content = last_msg.get("content", "")
-                    if not str(content).strip().startswith("**"):
-                        header = _build_response_header()
-                        last_msg["content"] = f"{header}\n\n{content}".strip()
-
             yield partial_history, ""
 
         if final_history is None:
