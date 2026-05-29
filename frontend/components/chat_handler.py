@@ -485,7 +485,23 @@ def refresh_ui_state(model_choice_value: str = "xAI"):
     except:
         prompt_text = "❌ Konnte Prompt nicht laden"
 
-    model_value = model_choice_value if model_choice_value else gr.NO_UPDATE
+    # === NEU: Model aus Backend lesen (Single Source of Truth) ===
+    model_value = model_choice_value
+    try:
+        provider_result = call_mcp_tool("get_active_provider", {})
+        if isinstance(provider_result, str):
+            data = json.loads(provider_result)
+            provider = data.get("active_provider", "xai").lower()
+
+            mapping = {
+                "xai": "xAI",
+                "openai": "OpenAI",
+                "anthropic": "Anthropic",
+                "ollama": "Ollama",
+            }
+            model_value = mapping.get(provider, "xAI")
+    except Exception:
+        pass  # Fallback auf mitgegebenen Wert
 
     return (
         status[0],
