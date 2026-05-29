@@ -334,22 +334,29 @@ def chat_with_agent(message: str, history: list, model_choice: str):
 def chat_with_agent_streaming(message: str, history: list, model_choice: str):
     import time
 
-    if model_choice == "xAI":
-        provider_name = "xai"
-        model_display = os.getenv("XAI_MODEL")
-        MAX_TURNS = 6
-    elif model_choice == "OpenAI":
-        provider_name = "openai"
-        model_display = os.getenv("OPENAI_MODEL")
-        MAX_TURNS = 6
-    elif model_choice == "Anthropic":
-        provider_name = "anthropic"
-        model_display = os.getenv("ANTHROPIC_MODEL")
-        MAX_TURNS = 5
-    else:
-        provider_name = "ollama"
-        model_display = os.getenv("OLLAMA_MODEL")
-        MAX_TURNS = 4
+    provider_name = "xai"
+    model_display = os.getenv("XAI_MODEL", "grok")
+
+    try:
+        provider_result = call_mcp_tool("get_active_provider", {})
+        if isinstance(provider_result, str):
+            data = json.loads(provider_result)
+            prov = data.get("active_provider", "xai").lower()
+
+            if prov == "ollama":
+                provider_name = "ollama"
+                model_display = os.getenv("OLLAMA_MODEL", "llama3.1:latest")
+            elif prov == "openai":
+                provider_name = "openai"
+                model_display = os.getenv("OPENAI_MODEL", "gpt-4o")
+            elif prov == "anthropic":
+                provider_name = "anthropic"
+                model_display = os.getenv("ANTHROPIC_MODEL", "claude")
+            else:
+                provider_name = "xai"
+                model_display = os.getenv("XAI_MODEL", "grok")
+    except:
+        pass
 
     messages, _ = _prepare_messages(history, message, provider_name)
     context_line = _get_context_line()
