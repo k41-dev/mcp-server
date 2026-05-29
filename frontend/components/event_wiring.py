@@ -204,7 +204,6 @@ def load_chat_history_for_current_session():
     from .mcp_client import call_mcp_tool
     from .chat_handler import _build_response_header
     import json
-    import re
 
     result = call_mcp_tool("list_chat_history", {"limit": 60, "format": "gradio"})
 
@@ -222,20 +221,27 @@ def load_chat_history_for_current_session():
                             "content": "[Tool result received]"
                         })
                     elif msg.get("role") == "assistant":
-                        content = str(msg.get("content", ""))
+                        content = str(msg.get("content", "")).strip()
 
-                        # Prüfen, ob bereits ein Header-ähnlicher Block vorne existiert
-                        # (Header endet normalerweise mit einer Leerzeile)
-                        if re.match(r'^\*\*.*?\*\*\s*\n', content):
-                            # Alten Header entfernen und durch aktuellen ersetzen
-                            content = re.sub(r'^\*\*.*?\*\*\s*\n+', '', content, count=1)
+                        lines = content.split("\n")
 
-                        # Immer den aktuellen Header vorne setzen (clean)
-                        msg = {
+                        # Entferne nur die ersten 1-2 Zeilen, wenn sie wie unser Header aussehen
+                        start = 0
+                        if lines and lines[0].strip().startswith("**"):
+                            start = 1
+                            # Falls direkt danach eine Context-Zeile kommt (*🎭 / *🛠️ / *📍)
+                            if len(lines) > 1 and lines[1].strip().startswith(("*🎭", "*🛠️", "*📍")):
+                                start = 2
+
+                        cleaned_content = "\n".join(lines[start:]).strip()
+
+                        # Immer exakt einen sauberen Header oben setzen
+                        final_content = f"{header}\n\n{cleaned_content}".strip()
+
+                        cleaned.append({
                             "role": "assistant",
-                            "content": f"{header}\n\n{content}".strip()
-                        }
-                        cleaned.append(msg)
+                            "content": final_content
+                        })
                     else:
                         cleaned.append(msg)
 
