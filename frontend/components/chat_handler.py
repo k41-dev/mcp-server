@@ -616,6 +616,18 @@ def respond(user_message, chat_history, model):
             yield temp_history, ""
             return temp_history, ""
 
+        # ============================================================
+        # ZENTRALE HEADER-LOGIK (einmalig, robust, architektonisch sauber)
+        # ============================================================
+        if final_history and len(final_history) > 0:
+            last_msg = final_history[-1]
+            if last_msg.get("role") == "assistant":
+                content = last_msg.get("content", "")
+                # Nur ergänzen, wenn noch kein Header vorhanden ist
+                if not str(content).strip().startswith("**"):
+                    header = _build_response_header()
+                    last_msg["content"] = f"{header}\n\n{content}".strip()
+
         return final_history, ""
 
     except Exception as e:
