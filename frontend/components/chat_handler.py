@@ -17,10 +17,11 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # ====================== HELPER ======================
 def _get_context_line() -> str:
-    """Holt aktive Persona + Skill + aktuelle Session und baut die Context-Line."""
+    """Holt aktive Persona + Skill + aktuelle Session + Model und baut die Context-Line."""
     active_persona_name = "None"
     active_skill_name = "None"
     current_session = "?"
+    current_model = "?"
 
     try:
         # Aktive Session
@@ -52,12 +53,13 @@ def _get_context_line() -> str:
             except:
                 pass
 
-        # === NEU: Aktives Model aus Backend lesen ===
+        # === Model aus Backend holen (Single Source of Truth) ===
         provider_result = call_mcp_tool("get_active_provider", {})
         if isinstance(provider_result, str):
             try:
                 data = json.loads(provider_result)
-                provider = data.get("active_provider", "xai")
+                provider = data.get("active_provider", "xai").lower()
+
                 model_map = {
                     "xai": os.getenv("XAI_MODEL", "grok"),
                     "openai": os.getenv("OPENAI_MODEL", "gpt-4o"),
@@ -77,6 +79,8 @@ def _get_context_line() -> str:
     if active_skill_name and active_skill_name != "None":
         parts.append(f"🛠️ {active_skill_name}")
     parts.append(f"📍 Session {current_session}")
+    if current_model and current_model != "?":
+        parts.append(f"🤖 {current_model}")
 
     return " • ".join(parts) if parts else ""
 
