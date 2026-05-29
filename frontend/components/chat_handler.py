@@ -372,7 +372,7 @@ def chat_with_agent(message: str, history: list, model_choice: str):
 def chat_with_agent_streaming(message: str, history: list, model_choice: str):
     import time
 
-    # Aktiven Skill ermitteln (für korrekte MAX_TURNS)
+    # Aktiven Skill ermitteln
     active_skill_name = ""
     try:
         skill_result = call_mcp_tool("get_active_skill", {})
@@ -462,16 +462,13 @@ def chat_with_agent_streaming(message: str, history: list, model_choice: str):
                     if (len(chunk_buffer) >= update_every or 
                         content.endswith((" ", "\n", ".", "!", "?", ":", ";"))):
 
-                        # Header wird zentral über _build_response_header() gesteuert
-                        header = _build_response_header()
-                        display_content = f"{header}\n\n{full_response}"
-
-                        chat_history[assistant_index]["content"] = display_content + "▌"
+                        # Während des Streamings KEIN Header (nur reiner Content)
+                        chat_history[assistant_index]["content"] = full_response + "▌"
                         yield chat_history
                         chunk_buffer = ""
                         time.sleep(0.012)
 
-        # Finale Nachricht mit zentralem Header
+        # === Header NUR EINMAL am Ende (oben) ===
         header = _build_response_header()
         final_content = f"{header}\n\n{full_response}"
 
