@@ -307,11 +307,14 @@ def _chat_with_agent_generator(message: str, history: list, model_choice: str):
 
                 continue
 
-            # Finale Antwort
-            final_msg = f"**{model_display}**"
-            if context_line:
-                final_msg += f"\n*{context_line}*"
+            # === Finale Antwort mit garantierter Überschrift ===
+            header = f"**{model_display}**"
+            if context_line and context_line.strip():
+                header += f"\n*{context_line}*"
+
+            final_msg = header
             final_msg += f"\n\n{content or ''}"
+
             if tool_steps:
                 final_msg += "\n\n" + "\n".join(tool_steps)
 
@@ -346,7 +349,18 @@ def chat_with_agent(message: str, history: list, model_choice: str):
 def chat_with_agent_streaming(message: str, history: list, model_choice: str):
     import time
 
-        # === Provider + Model + MAX_TURNS frisch aus Backend holen ===
+    # Aktiven Skill ermitteln (genau wie im non-streaming Generator)
+    active_skill_name = ""
+    try:
+        skill_result = call_mcp_tool("get_active_skill", {})
+        if isinstance(skill_result, str):
+            data = json.loads(skill_result)
+            if isinstance(data, dict):
+                active_skill_name = data.get("name", "").lower().strip()
+    except Exception:
+        active_skill_name = ""
+
+    # === Provider + Model + MAX_TURNS exakt wie im non-streaming Generator ===
     provider_name = "xai"
     model_display = os.getenv("XAI_MODEL", "grok")
     MAX_TURNS = 6
@@ -374,12 +388,11 @@ def chat_with_agent_streaming(message: str, history: list, model_choice: str):
                 model_display = os.getenv("ANTHROPIC_MODEL", "claude")
                 MAX_TURNS = 8 if is_long_running else 5
 
-            else:  # xai
+            else:
                 provider_name = "xai"
                 model_display = os.getenv("XAI_MODEL", "grok")
                 MAX_TURNS = 10 if is_long_running else 6
-
-    except Exception:
+    except:
         pass
 
     messages, _ = _prepare_messages(history, message, provider_name)
