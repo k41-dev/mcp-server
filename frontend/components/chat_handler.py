@@ -17,11 +17,12 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # ====================== HELPER ======================
 def _get_context_line() -> str:
-    """Holt aktive Persona + Skill + aktuelle Session + Model und baut die Context-Line."""
-    active_persona_name = "None"
-    active_skill_name = "None"
+    """Holt aktive Persona + Skill + aktuelle Session und baut eine saubere Context-Line.
+    Zeigt immer mindestens die Session. Persona und Skill nur, wenn sie wirklich aktiv sind.
+    """
+    active_persona_name = ""
+    active_skill_name = ""
     current_session = "?"
-    current_model = "?"
 
     try:
         # Aktive Session
@@ -33,40 +34,27 @@ def _get_context_line() -> str:
             except:
                 pass
 
-        # Persona
+        # Persona (nur setzen, wenn wirklich aktiv)
         persona_result = call_mcp_tool("get_active_persona", {})
         if isinstance(persona_result, str):
             try:
                 data = json.loads(persona_result)
-                if isinstance(data, dict) and "name" in data:
-                    active_persona_name = data.get("name", "None")
+                if isinstance(data, dict):
+                    name = data.get("name", "")
+                    if name and name.lower() != "none":
+                        active_persona_name = name
             except:
                 pass
 
-        # Skill
+        # Skill (nur setzen, wenn wirklich aktiv)
         skill_result = call_mcp_tool("get_active_skill", {})
         if isinstance(skill_result, str):
             try:
                 data = json.loads(skill_result)
-                if isinstance(data, dict) and "name" in data:
-                    active_skill_name = data.get("name", "None")
-            except:
-                pass
-
-        # === Model aus Backend holen (Single Source of Truth) ===
-        provider_result = call_mcp_tool("get_active_provider", {})
-        if isinstance(provider_result, str):
-            try:
-                data = json.loads(provider_result)
-                provider = data.get("active_provider", "xai").lower()
-
-                model_map = {
-                    "xai": os.getenv("XAI_MODEL", "grok"),
-                    "openai": os.getenv("OPENAI_MODEL", "gpt-4o"),
-                    "anthropic": os.getenv("ANTHROPIC_MODEL", "claude"),
-                    "ollama": os.getenv("OLLAMA_MODEL", "llama3"),
-                }
-                current_model = model_map.get(provider, "?")
+                if isinstance(data, dict):
+                    name = data.get("name", "")
+                    if name and name.lower() != "none":
+                        active_skill_name = name
             except:
                 pass
 
@@ -74,15 +62,13 @@ def _get_context_line() -> str:
         pass
 
     parts = []
-    if active_persona_name and active_persona_name != "None":
+    if active_persona_name:
         parts.append(f"🎭 {active_persona_name}")
-    if active_skill_name and active_skill_name != "None":
+    if active_skill_name:
         parts.append(f"🛠️ {active_skill_name}")
     parts.append(f"📍 Session {current_session}")
-    if current_model and current_model != "?":
-        parts.append(f"🤖 {current_model}")
 
-    return " • ".join(parts) if parts else ""
+    return " • ".join(parts)
 
 
 def switch_model_provider(model_choice_value: str) -> str:
