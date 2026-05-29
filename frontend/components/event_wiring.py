@@ -202,6 +202,7 @@ def refresh_after_state_change(model_choice):
 
 def load_chat_history_for_current_session():
     from .mcp_client import call_mcp_tool
+    from .chat_handler import _build_response_header
     import json
 
     result = call_mcp_tool("list_chat_history", {"limit": 60, "format": "gradio"})
@@ -210,16 +211,27 @@ def load_chat_history_for_current_session():
         try:
             data = json.loads(result)
             if isinstance(data, list):
-                # Tool-Nachrichten etwas schöner darstellen (falls sie durchkommen)
                 cleaned = []
+                header = _build_response_header()
+
                 for msg in data:
                     if msg.get("role") == "tool":
                         cleaned.append({
                             "role": "assistant",
                             "content": "[Tool result received]"
                         })
+                    elif msg.get("role") == "assistant":
+                        content = msg.get("content", "")
+                        # Nur ergänzen, wenn die Nachricht noch keinen Header hat
+                        if not str(content).strip().startswith("**"):
+                            msg = {
+                                "role": "assistant",
+                                "content": f"{header}\n\n{content}".strip()
+                            }
+                        cleaned.append(msg)
                     else:
                         cleaned.append(msg)
+
                 return cleaned
         except Exception:
             pass
