@@ -219,8 +219,10 @@ def _chat_with_agent_generator(message: str, history: list, model_choice: str):
     except Exception:
         active_skill_name = ""
 
+        # === Provider + Model + MAX_TURNS frisch aus Backend holen ===
     provider_name = "xai"
     model_display = os.getenv("XAI_MODEL", "grok")
+    MAX_TURNS = 6
 
     try:
         provider_result = call_mcp_tool("get_active_provider", {})
@@ -228,19 +230,29 @@ def _chat_with_agent_generator(message: str, history: list, model_choice: str):
             data = json.loads(provider_result)
             prov = data.get("active_provider", "xai").lower()
 
+            is_long_running = active_skill_name == "long_running_autonomous"
+
             if prov == "ollama":
                 provider_name = "ollama"
                 model_display = os.getenv("OLLAMA_MODEL", "llama3.1:latest")
+                MAX_TURNS = 6 if is_long_running else 4
+
             elif prov == "openai":
                 provider_name = "openai"
                 model_display = os.getenv("OPENAI_MODEL", "gpt-4o")
+                MAX_TURNS = 10 if is_long_running else 6
+
             elif prov == "anthropic":
                 provider_name = "anthropic"
                 model_display = os.getenv("ANTHROPIC_MODEL", "claude")
-            else:
+                MAX_TURNS = 8 if is_long_running else 5
+
+            else:  # xai
                 provider_name = "xai"
                 model_display = os.getenv("XAI_MODEL", "grok")
-    except:
+                MAX_TURNS = 10 if is_long_running else 6
+
+    except Exception:
         pass
 
     messages, current_version = _prepare_messages(history, message, provider_name)
@@ -334,8 +346,10 @@ def chat_with_agent(message: str, history: list, model_choice: str):
 def chat_with_agent_streaming(message: str, history: list, model_choice: str):
     import time
 
+        # === Provider + Model + MAX_TURNS frisch aus Backend holen ===
     provider_name = "xai"
     model_display = os.getenv("XAI_MODEL", "grok")
+    MAX_TURNS = 6
 
     try:
         provider_result = call_mcp_tool("get_active_provider", {})
@@ -343,19 +357,29 @@ def chat_with_agent_streaming(message: str, history: list, model_choice: str):
             data = json.loads(provider_result)
             prov = data.get("active_provider", "xai").lower()
 
+            is_long_running = active_skill_name == "long_running_autonomous"
+
             if prov == "ollama":
                 provider_name = "ollama"
                 model_display = os.getenv("OLLAMA_MODEL", "llama3.1:latest")
+                MAX_TURNS = 6 if is_long_running else 4
+
             elif prov == "openai":
                 provider_name = "openai"
                 model_display = os.getenv("OPENAI_MODEL", "gpt-4o")
+                MAX_TURNS = 10 if is_long_running else 6
+
             elif prov == "anthropic":
                 provider_name = "anthropic"
                 model_display = os.getenv("ANTHROPIC_MODEL", "claude")
-            else:
+                MAX_TURNS = 8 if is_long_running else 5
+
+            else:  # xai
                 provider_name = "xai"
                 model_display = os.getenv("XAI_MODEL", "grok")
-    except:
+                MAX_TURNS = 10 if is_long_running else 6
+
+    except Exception:
         pass
 
     messages, _ = _prepare_messages(history, message, provider_name)
