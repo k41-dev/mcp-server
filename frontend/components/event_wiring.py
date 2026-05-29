@@ -223,15 +223,28 @@ def load_chat_history_for_current_session():
                     elif msg.get("role") == "assistant":
                         content = str(msg.get("content", "")).strip()
 
-                        # Robust prüfen, ob die Nachricht bereits einen Header hat
-                        first_line = content.split("\n")[0].strip() if content else ""
-                        if not first_line.startswith("**"):
-                            # Nur dann Header vorne anfügen
-                            msg = {
-                                "role": "assistant",
-                                "content": f"{header}\n\n{content}".strip()
-                            }
-                        cleaned.append(msg)
+                        # === Robuste Bereinigung alter Header ===
+                        lines = content.split("\n")
+
+                        # Überspringe alle Zeilen am Anfang, die wie Header aussehen
+                        start_index = 0
+                        for i, line in enumerate(lines):
+                            line_stripped = line.strip()
+                            if line_stripped.startswith("**") or line_stripped.startswith("*🎭") or line_stripped.startswith("*🛠️") or line_stripped.startswith("*📍"):
+                                start_index = i + 1
+                            else:
+                                break
+
+                        # Restlichen Content ohne alten Header
+                        cleaned_content = "\n".join(lines[start_index:]).strip()
+
+                        # Immer exakt einen sauberen Header oben setzen
+                        final_content = f"{header}\n\n{cleaned_content}".strip()
+
+                        cleaned.append({
+                            "role": "assistant",
+                            "content": final_content
+                        })
                     else:
                         cleaned.append(msg)
 
