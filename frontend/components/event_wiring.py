@@ -200,9 +200,7 @@ def refresh_after_state_change(model_choice):
     return refresh_ui_state(model_choice)
 
 
-ddef load_chat_history_for_current_session():
-    """Lädt die History RO H ohne jegliche Header-Manipulation.
-    Header wird nur bei neuen Nachrichten gesetzt."""
+def load_chat_history_for_current_session():
     from .mcp_client import call_mcp_tool
     import json
 
@@ -212,12 +210,20 @@ ddef load_chat_history_for_current_session():
         try:
             data = json.loads(result)
             if isinstance(data, list):
-                # Kein Cleaning, keine Header-Logik mehr
-                return data
+                cleaned = []
+                for msg in data:
+                    if msg.get("role") == "tool":
+                        cleaned.append({
+                            "role": "assistant",
+                            "content": "[Tool result received]"
+                        })
+                    else:
+                        cleaned.append(msg)
+                return cleaned
         except Exception:
             pass
     return []
-
+    
 
 def wire_persona_controls(
     persona_dropdown,
