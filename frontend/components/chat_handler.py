@@ -219,25 +219,29 @@ def _chat_with_agent_generator(message: str, history: list, model_choice: str):
     except Exception:
         active_skill_name = ""
 
-    if model_choice == "xAI":
-        provider_name = "xai"
-        model_display = os.getenv("XAI_MODEL")
-        MAX_TURNS = 10 if active_skill_name == "long_running_autonomous" else 6
+    provider_name = "xai"
+    model_display = os.getenv("XAI_MODEL", "grok")
 
-    elif model_choice == "OpenAI":
-        provider_name = "openai"
-        model_display = os.getenv("OPENAI_MODEL")
-        MAX_TURNS = 10 if active_skill_name == "long_running_autonomous" else 6
+    try:
+        provider_result = call_mcp_tool("get_active_provider", {})
+        if isinstance(provider_result, str):
+            data = json.loads(provider_result)
+            prov = data.get("active_provider", "xai").lower()
 
-    elif model_choice == "Anthropic":
-        provider_name = "anthropic"
-        model_display = os.getenv("ANTHROPIC_MODEL")
-        MAX_TURNS = 8 if active_skill_name == "long_running_autonomous" else 5
-
-    else:  # Ollama
-        provider_name = "ollama"
-        model_display = os.getenv("OLLAMA_MODEL")
-        MAX_TURNS = 6 if active_skill_name == "long_running_autonomous" else 4
+            if prov == "ollama":
+                provider_name = "ollama"
+                model_display = os.getenv("OLLAMA_MODEL", "llama3.1:latest")
+            elif prov == "openai":
+                provider_name = "openai"
+                model_display = os.getenv("OPENAI_MODEL", "gpt-4o")
+            elif prov == "anthropic":
+                provider_name = "anthropic"
+                model_display = os.getenv("ANTHROPIC_MODEL", "claude")
+            else:
+                provider_name = "xai"
+                model_display = os.getenv("XAI_MODEL", "grok")
+    except:
+        pass
 
     messages, current_version = _prepare_messages(history, message, provider_name)
     tool_steps = []
