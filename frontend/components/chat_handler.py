@@ -52,6 +52,22 @@ def _get_context_line() -> str:
             except:
                 pass
 
+        # === NEU: Aktives Model aus Backend lesen ===
+        provider_result = call_mcp_tool("get_active_provider", {})
+        if isinstance(provider_result, str):
+            try:
+                data = json.loads(provider_result)
+                provider = data.get("active_provider", "xai")
+                model_map = {
+                    "xai": os.getenv("XAI_MODEL", "grok"),
+                    "openai": os.getenv("OPENAI_MODEL", "gpt-4o"),
+                    "anthropic": os.getenv("ANTHROPIC_MODEL", "claude"),
+                    "ollama": os.getenv("OLLAMA_MODEL", "llama3"),
+                }
+                current_model = model_map.get(provider, "?")
+            except:
+                pass
+
     except Exception:
         pass
 
