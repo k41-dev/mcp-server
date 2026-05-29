@@ -17,14 +17,14 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # ====================== HELPER ======================
 def _build_response_header() -> str:
-    """Erzeugt immer eine saubere Header-Zeile mit Model + Context.
-    Wird direkt vor dem Senden einer Assistant-Antwort aufgerufen.
+    """Erzeugt einen frischen, robusten Header direkt aus dem Backend-State.
+    Wird bei jeder finalen Assistant-Antwort aufgerufen.
     """
-    model_display = "llama3.1:latest"  # Fallback
-    context_line = ""
+    model_display = None
+    context_parts = []
 
     try:
-        # Aktuellen Provider + Model holen
+        # === 1. Aktiven Provider + Model holen ===
         provider_result = call_mcp_tool("get_active_provider", {})
         if isinstance(provider_result, str):
             data = json.loads(provider_result)
@@ -36,17 +36,25 @@ def _build_response_header() -> str:
                 "openai": os.getenv("OPENAI_MODEL", "gpt-4o"),
                 "anthropic": os.getenv("ANTHROPIC_MODEL", "claude"),
             }
-            model_display = model_map.get(prov, model_display)
+            model_display = model_map.get(prov, os.getenv("XAI_MODEL", "grok"))
 
-        # Context-Line holen
+        # === 2. Context-Line frisch holen ===
         context_line = _get_context_line()
+        if context_line and context_line.strip():
+            context_parts.append(context_line)
 
-    except Exception:
-        pass
+    except Exception as e:
+        # Im Fehlerfall trotzdem einen Header bauen
+        model_display = os.getenv("XAI_MODEL", "grok")
+
+    # Fallback falls model_display nicht gesetzt wurde
+    if not model_display:
+        model_display = os.getenv("XAI_MODEL", "grok")
 
     header = f"**{model_display}**"
-    if context_line and context_line.strip():
-        header += f"\n*{context_line}*"
+
+    if context_parts:
+        header += "\n*" + " • ".join(context_parts) + "*"
 
     return header
 
