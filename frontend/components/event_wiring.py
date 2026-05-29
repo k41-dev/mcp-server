@@ -224,23 +224,18 @@ def load_chat_history_for_current_session():
                     elif msg.get("role") == "assistant":
                         content = str(msg.get("content", ""))
 
-                        # === Aggressive Reinigung: Alle alten Header-Strukturen entfernen ===
-                        # Entferne **...** Blöcke (auch mehrzeilig)
-                        content = re.sub(r'\*\*.*?\*\*', '', content, flags=re.DOTALL)
-                        # Entferne Context-Zeilen (*🎭 ...*, *🛠️ ...*, *📍 ...)
-                        content = re.sub(r'\n?\*🎭.*?\*', '', content)
-                        content = re.sub(r'\n?\*🛠️.*?\*', '', content)
-                        content = re.sub(r'\n?\*📍.*?\*', '', content)
+                        # Prüfen, ob bereits ein Header-ähnlicher Block vorne existiert
+                        # (Header endet normalerweise mit einer Leerzeile)
+                        if re.match(r'^\*\*.*?\*\*\s*\n', content):
+                            # Alten Header entfernen und durch aktuellen ersetzen
+                            content = re.sub(r'^\*\*.*?\*\*\s*\n+', '', content, count=1)
 
-                        content = content.strip()
-
-                        # Immer exakt einen sauberen Header oben setzen
-                        final_content = f"{header}\n\n{content}".strip()
-
-                        cleaned.append({
+                        # Immer den aktuellen Header vorne setzen (clean)
+                        msg = {
                             "role": "assistant",
-                            "content": final_content
-                        })
+                            "content": f"{header}\n\n{content}".strip()
+                        }
+                        cleaned.append(msg)
                     else:
                         cleaned.append(msg)
 
