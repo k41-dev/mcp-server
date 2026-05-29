@@ -328,9 +328,7 @@ def _chat_with_agent_generator(message: str, history: list, model_choice: str):
 
                 continue
 
-            # Finale Antwort mit zentraler Header-Funktion
-            header = _build_response_header()
-            final_msg = header + f"\n\n{content or ''}"
+            final_msg = content or ""
 
             if tool_steps:
                 final_msg += "\n\n" + "\n".join(tool_steps)
@@ -366,7 +364,7 @@ def chat_with_agent(message: str, history: list, model_choice: str):
 def chat_with_agent_streaming(message: str, history: list, model_choice: str):
     import time
 
-    # Aktiven Skill ermitteln (genau wie im non-streaming Generator)
+    # Aktiven Skill ermitteln (für korrekte MAX_TURNS)
     active_skill_name = ""
     try:
         skill_result = call_mcp_tool("get_active_skill", {})
@@ -377,7 +375,7 @@ def chat_with_agent_streaming(message: str, history: list, model_choice: str):
     except Exception:
         active_skill_name = ""
 
-    # === Provider + Model + MAX_TURNS exakt wie im non-streaming Generator ===
+    # === Provider + Model + MAX_TURNS frisch aus Backend holen ===
     provider_name = "xai"
     model_display = os.getenv("XAI_MODEL", "grok")
     MAX_TURNS = 6
@@ -394,17 +392,14 @@ def chat_with_agent_streaming(message: str, history: list, model_choice: str):
                 provider_name = "ollama"
                 model_display = os.getenv("OLLAMA_MODEL", "llama3.1:latest")
                 MAX_TURNS = 6 if is_long_running else 4
-
             elif prov == "openai":
                 provider_name = "openai"
                 model_display = os.getenv("OPENAI_MODEL", "gpt-4o")
                 MAX_TURNS = 10 if is_long_running else 6
-
             elif prov == "anthropic":
                 provider_name = "anthropic"
                 model_display = os.getenv("ANTHROPIC_MODEL", "claude")
                 MAX_TURNS = 8 if is_long_running else 5
-
             else:
                 provider_name = "xai"
                 model_display = os.getenv("XAI_MODEL", "grok")
@@ -459,16 +454,16 @@ def chat_with_agent_streaming(message: str, history: list, model_choice: str):
                     if (len(chunk_buffer) >= update_every or 
                         content.endswith((" ", "\n", ".", "!", "?", ":", ";"))):
 
-                        header = _build_response_header()
-                        display_content = f"{header}\n\n{full_response}"
+                        # Kein eigener Header mehr hier (wird zentral in respond() gesetzt)
+                        display_content = full_response
 
                         chat_history[assistant_index]["content"] = display_content + "▌"
                         yield chat_history
                         chunk_buffer = ""
                         time.sleep(0.012)
 
-        header = _build_response_header()
-        final_content = f"{header}\n\n{full_response}"
+        # Kein eigener Header mehr hier (wird zentral in respond() gesetzt)
+        final_content = full_response
 
         if assistant_index is not None:
             chat_history[assistant_index]["content"] = final_content
