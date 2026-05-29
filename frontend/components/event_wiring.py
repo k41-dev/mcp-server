@@ -221,9 +221,12 @@ def load_chat_history_for_current_session():
                             "content": "[Tool result received]"
                         })
                     elif msg.get("role") == "assistant":
-                        content = msg.get("content", "")
-                        # Nur ergänzen, wenn die Nachricht noch keinen Header hat
-                        if not str(content).strip().startswith("**"):
+                        content = str(msg.get("content", "")).strip()
+
+                        # Robust prüfen, ob die Nachricht bereits einen Header hat
+                        first_line = content.split("\n")[0].strip() if content else ""
+                        if not first_line.startswith("**"):
+                            # Nur dann Header vorne anfügen
                             msg = {
                                 "role": "assistant",
                                 "content": f"{header}\n\n{content}".strip()
