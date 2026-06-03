@@ -252,7 +252,10 @@ class AgentContext:
     def current(cls) -> "AgentContext":
         from backend.tools.session_manager import session_manager
         ctx = cls(session_id=session_manager.get_current_session_id())
-        ctx._ensure_context_restored() 
+        try:
+            ctx._ensure_context_restored()
+        except Exception:
+            pass
         return ctx
 
 
