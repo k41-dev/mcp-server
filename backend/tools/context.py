@@ -168,65 +168,73 @@ class AgentContext:
 
     # ====================== Session ======================
     def switch_to_session(self, session_id: int) -> bool:
-        from backend.tools.session_manager import session_manager
+        """
+        Wechselt zu einer anderen Session und stellt deren gespeicherten Context
+        zuverlässig wieder her (Provider, Persona, Skill).
+        """
         from backend.tools.state import (
-            set_active_persona, set_active_skill, set_active_provider,
             clear_active_persona, clear_active_skill, clear_active_provider,
-            get_active_provider as _get_active_provider,
+            set_active_persona, set_active_skill, set_active_provider
         )
+        from backend.tools.session_manager import session_manager
 
+        if session_id == self.session_id:
+            return True  # bereits in dieser Session
+
+        old_session_id = self.session_id
+
+        # 1. Aktuellen Context der alten Session sichern
         self.save_context_to_session()
 
+        # 2. Ziel-Session laden
         session_data = session_manager.get_session(session_id)
         if not session_data:
             return False
 
-        # === Früher Wechsel des current-Session-Pointers (defensiv) ===
-        # Ab diesem Punkt sieht AgentContext.current() bereits die Ziel-Session.
-        # Das verhindert Timing-Probleme beim Restore von Provider/Persona/Skill.
-        old_session_id = self.session_id
-        self.session_id = session_id
-        session_manager.set_current_session_id(session_id)
-
         context = session_data.get("context", {}) or {}
+        if not isinstance(context, dict):
+            context = {}
 
-        # Alten transienten State sauber räumen (mit der alten ID)
+        # 3. Alten transienten State der alten Session sauber löschen
         clear_active_persona(session_id=old_session_id)
         clear_active_skill(session_id=old_session_id)
         clear_active_provider(session_id=old_session_id)
 
-        # === Provider ===
-        saved_provider = context.get("provider") if isinstance(context, dict) else None
+        # 4. Neuen State aus dem gespeicherten Context der Ziel-Session setzen
+        # Provider (immer setzen)
+        saved_provider = context.get("provider") or "xai"
+        set_active_provider(saved_provider, session_id=session_id)
 
-        if saved_provider:
-            set_active_provider(saved_provider, session_id=session_id)
-        else:
-            set_active_provider("xai", session_id=session_id)
-
-        # Persona & Skill wiederherstellen (in die neue Session)
+        # Persona (falls vorhanden)
         if context.get("persona"):
             p = context["persona"]
             set_active_persona(
-                p.get("name", ""), 
-                p.get("instructions", ""), 
-                p.get("intensity", 7), 
+                p.get("name", ""),
+                p.get("instructions", ""),
+                p.get("intensity", 7),
                 session_id=session_id
             )
 
+        # Skill (falls vorhanden)
         if context.get("skill"):
             s = context["skill"]
             set_active_skill(
-                s.get("name", ""), 
-                s.get("content", ""), 
+                s.get("name", ""),
+                s.get("content", ""),
                 session_id=session_id
             )
 
+        # 5. Session-ID aktualisieren
+        self.session_id = session_id
+        session_manager.set_current_session_id(session_id)
+
+        # 6. Prompt-Cache invalidieren
         try:
             from backend.prompt_cache import clear_cache
             clear_cache()
         except Exception:
             pass
-            
+
         return True
 
 
