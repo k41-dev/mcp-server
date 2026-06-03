@@ -54,13 +54,13 @@ def _build_response_header() -> str:
 
 
 def _get_context_line() -> str:
-    """Einfache und stabile Version der Context-Zeile."""
+    """Context-Zeile mit Fallback direkt auf die Datenbank (sessions.context)."""
     active_persona_name = ""
     active_skill_name = ""
     current_session = "?"
 
     try:
-        # Session
+        # === Session ID holen ===
         session_result = call_mcp_tool("get_active_session", {})
         if isinstance(session_result, str):
             try:
@@ -70,7 +70,21 @@ def _get_context_line() -> str:
             except Exception:
                 pass
 
-        # Persona
+        # === Helper: Context aus DB holen ===
+        def _get_context_from_db():
+            try:
+                from backend.tools.session_manager import session_manager
+                sid = int(current_session) if current_session.isdigit() else None
+                if sid is None:
+                    return {}
+                session_data = session_manager.get_session(sid)
+                return session_data.get("context", {}) if session_data else {}
+            except Exception:
+                return {}
+
+        db_context = _get_context_from_db()
+
+        # === Persona ===
         persona_result = call_mcp_tool("get_active_persona", {})
         if isinstance(persona_result, str):
             try:
@@ -82,7 +96,14 @@ def _get_context_line() -> str:
             except Exception:
                 pass
 
-        # Skill
+        # Fallback auf DB, wenn transient leer ist
+        if not active_persona_name and db_context.get("persona"):
+            p = db_context["persona"]
+            name = p.get("name", "")
+            if name and str(name).lower().strip() not in ("", "none", "default"):
+                active_persona_name = name
+
+        # === Skill ===
         skill_result = call_mcp_tool("get_active_skill", {})
         if isinstance(skill_result, str):
             try:
@@ -93,6 +114,13 @@ def _get_context_line() -> str:
                         active_skill_name = name
             except Exception:
                 pass
+
+        # Fallback auf DB
+        if not active_skill_name and db_context.get("skill"):
+            s = db_context["skill"]
+            name = s.get("name", "")
+            if name and str(name).lower().strip() not in ("", "none"):
+                active_skill_name = name
 
     except Exception:
         pass
