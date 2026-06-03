@@ -49,14 +49,16 @@ def get_active_persona(args: Dict[str, Any]) -> Dict[str, Any]:
     ctx = AgentContext.current()
     persona = ctx.active_persona
 
-    # Falls transient leer oder ohne Name → aus DB holen
-    if not persona or not persona.get("name"):
+    # Fallback auf DB, wenn Name fehlt oder ungültig ist
+    if (not persona or 
+        not isinstance(persona, dict) or 
+        not persona.get("name") or 
+        str(persona.get("name")).lower().strip() in ("", "none", "default")):
+        
         try:
             session_data = session_manager.get_session(ctx.session_id)
-            if session_data:
-                db_context = session_data.get("context", {}) or {}
-                if db_context.get("persona"):
-                    persona = db_context["persona"]
+            if session_data and session_data.get("context", {}).get("persona"):
+                persona = session_data["context"]["persona"]
         except Exception:
             pass
 

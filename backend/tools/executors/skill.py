@@ -95,14 +95,15 @@ def get_active_skill(args: Dict[str, Any]) -> Dict[str, Any]:
     ctx = AgentContext.current()
     skill = ctx.active_skill
 
-    # Falls transient leer oder ohne Name → aus DB holen
-    if not skill or not skill.get("name"):
+    if (not skill or 
+        not isinstance(skill, dict) or 
+        not skill.get("name") or 
+        str(skill.get("name")).lower().strip() in ("", "none")):
+        
         try:
             session_data = session_manager.get_session(ctx.session_id)
-            if session_data:
-                db_context = session_data.get("context", {}) or {}
-                if db_context.get("skill"):
-                    skill = db_context["skill"]
+            if session_data and session_data.get("context", {}).get("skill"):
+                skill = session_data["context"]["skill"]
         except Exception:
             pass
 
