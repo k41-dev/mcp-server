@@ -54,9 +54,14 @@ def _build_response_header() -> str:
 
 
 def _get_context_line() -> str:
-    """Baut die Context-Zeile (Persona • Skill • Session).
-    Garantiert mindestens die Session-Zeile. Sehr defensiv.
-    """
+    """Baut die Context-Zeile. Stellt sicher, dass der State nach Session-Wechsel da ist."""
+    try:
+        from backend.tools.context import AgentContext
+        ctx = AgentContext.current()
+        ctx._ensure_context_restored()
+    except Exception:
+        pass
+
     active_persona_name = ""
     active_skill_name = ""
     current_session = "?"

@@ -180,9 +180,6 @@ class AgentContext:
 
     # ====================== Session ======================
     def switch_to_session(self, session_id: int) -> bool:
-        """
-        Wechselt zu einer anderen Session und stellt den gespeicherten Context wieder her.
-        """
         from backend.tools.state import (
             clear_active_persona, clear_active_skill, clear_active_provider,
             set_active_persona, set_active_skill, set_active_provider
@@ -194,10 +191,8 @@ class AgentContext:
 
         old_session_id = self.session_id
 
-        # Alten Context sichern
         self.save_context_to_session()
 
-        # Ziel-Session laden
         session_data = session_manager.get_session(session_id)
         if not session_data:
             return False
@@ -206,33 +201,32 @@ class AgentContext:
         if not isinstance(context, dict):
             context = {}
 
-        # Alten transienten State der alten Session löschen
+        # Alten State der alten Session löschen
         clear_active_persona(session_id=old_session_id)
         clear_active_skill(session_id=old_session_id)
         clear_active_provider(session_id=old_session_id)
 
-        # Neuen State setzen
-        saved_provider = context.get("provider") or "xai"
-        set_active_provider(saved_provider, session_id=session_id)
+        # === Immer explizit aus dem DB-Context setzen ===
+        provider = context.get("provider") or "xai"
+        set_active_provider(provider, session_id=session_id)
 
         if context.get("persona"):
-            p = context["persona"]
+            p = context.get("persona") or {}
             set_active_persona(
-                p.get("name", ""),
-                p.get("instructions", ""),
-                p.get("intensity", 7),
+                p.get("name") or "",
+                p.get("instructions") or "",
+                p.get("intensity") or 7,
                 session_id=session_id
             )
 
         if context.get("skill"):
-            s = context["skill"]
+            s = context.get("skill") or {}
             set_active_skill(
-                s.get("name", ""),
-                s.get("content", ""),
+                s.get("name") or "",
+                s.get("content") or "",
                 session_id=session_id
             )
 
-        # Session wechseln
         self.session_id = session_id
         session_manager.set_current_session_id(session_id)
 
