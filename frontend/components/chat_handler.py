@@ -54,7 +54,12 @@ def _build_response_header() -> str:
 
 
 def _get_context_line() -> str:
-    """Baut die Context-Zeile. Stellt sicher, dass der State nach Session-Wechsel da ist."""
+    """Baut die Context-Zeile. Robust gegen unterschiedliche Rückgabeformate von call_mcp_tool."""
+    active_persona_name = ""
+    active_skill_name = ""
+    current_session = "?"
+
+    # === Force Restore nach Session-Wechsel ===
     try:
         from backend.tools.context import AgentContext
         ctx = AgentContext.current()
@@ -62,26 +67,34 @@ def _get_context_line() -> str:
     except Exception:
         pass
 
-    active_persona_name = ""
-    active_skill_name = ""
-    current_session = "?"
-
     try:
-        # Session
+        # --- Session ---
         session_result = call_mcp_tool("get_active_session", {})
-        if isinstance(session_result, str):
+        if isinstance(session_result, (str, dict)):
             try:
-                session_data = json.loads(session_result)
+                if isinstance(session_result, str):
+                    session_data = json.loads(session_result)
+                else:
+                    session_data = session_result
                 if isinstance(session_data, dict):
                     current_session = str(session_data.get("session_id", "?"))
             except Exception:
                 pass
 
-        # Persona
+        # --- Persona (robust gegen str oder dict) ---
         persona_result = call_mcp_tool("get_active_persona", {})
-        if isinstance(persona_result, str):
+        if isinstance(persona_result, (str, dict)):
             try:
-                data = json.loads(persona_result)
+                if isinstance(persona_result, str):
+                    data = json.loads(persona_result)
+                else:
+                    data = persona_result
+
+                # Manche Tools liefern {"content": [{"text": "..."}]}
+                if isinstance(data, dict) and "content" in data:
+                    text = data["content"][0].get("text", "{}")
+                    data = json.loads(text) if isinstance(text, str) else text
+
                 if isinstance(data, dict):
                     name = data.get("name", "")
                     if name and str(name).lower().strip() not in ("", "none", "default"):
@@ -89,11 +102,19 @@ def _get_context_line() -> str:
             except Exception:
                 pass
 
-        # Skill
+        # --- Skill (robust gegen str oder dict) ---
         skill_result = call_mcp_tool("get_active_skill", {})
-        if isinstance(skill_result, str):
+        if isinstance(skill_result, (str, dict)):
             try:
-                data = json.loads(skill_result)
+                if isinstance(skill_result, str):
+                    data = json.loads(skill_result)
+                else:
+                    data = skill_result
+
+                if isinstance(data, dict) and "content" in data:
+                    text = data["content"][0].get("text", "{}")
+                    data = json.loads(text) if isinstance(text, str) else text
+
                 if isinstance(data, dict):
                     name = data.get("name", "")
                     if name and str(name).lower().strip() not in ("", "none"):
