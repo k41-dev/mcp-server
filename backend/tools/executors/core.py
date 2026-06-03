@@ -381,13 +381,22 @@ def set_active_provider(args: Dict[str, Any]) -> Dict[str, Any]:
 
 def get_active_provider(args: Dict[str, Any]) -> Dict[str, Any]:
     from backend.tools.context import AgentContext
-
-    ctx = AgentContext.current()
-    ctx._ensure_context_restored()          # ← NEU
-
+    from backend.tools.session_manager import session_manager
     from backend.tools.state import get_active_provider as _get_active_provider
 
+    ctx = AgentContext.current()
     provider = _get_active_provider(session_id=ctx.session_id)
+
+    # Falls transient leer → aus DB holen
+    if not provider:
+        try:
+            session_data = session_manager.get_session(ctx.session_id)
+            if session_data:
+                db_context = session_data.get("context", {}) or {}
+                provider = db_context.get("provider")
+        except Exception:
+            pass
+
     if provider:
         return {"content": [{"type": "text", "text": json.dumps({"active_provider": provider})}]}
     else:

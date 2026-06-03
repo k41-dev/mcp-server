@@ -44,11 +44,22 @@ def set_active_persona(args: Dict[str, Any]) -> Dict[str, Any]:
 
 def get_active_persona(args: Dict[str, Any]) -> Dict[str, Any]:
     from backend.tools.context import AgentContext
+    from backend.tools.session_manager import session_manager
 
     ctx = AgentContext.current()
-    ctx._ensure_context_restored()        
-
     persona = ctx.active_persona
+
+    # Falls transient leer oder ohne Name → aus DB holen
+    if not persona or not persona.get("name"):
+        try:
+            session_data = session_manager.get_session(ctx.session_id)
+            if session_data:
+                db_context = session_data.get("context", {}) or {}
+                if db_context.get("persona"):
+                    persona = db_context["persona"]
+        except Exception:
+            pass
+
     if persona and isinstance(persona, dict):
         return {"content": [{"type": "text", "text": json.dumps(persona)}]}
     else:
