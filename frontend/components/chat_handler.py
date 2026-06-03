@@ -54,27 +54,35 @@ def _build_response_header() -> str:
 
 
 def _get_context_line() -> str:
-    """Context-Zeile mit robustem DB-Fallback (verwendet get_current_session_id)."""
+    """Stabile Context-Zeile mit DB-Fallback für Persona/Skill."""
     active_persona_name = ""
     active_skill_name = ""
     current_session = "?"
 
     try:
-        # === Aktuelle Session-ID direkt vom SessionManager holen ===
-        from backend.tools.session_manager import session_manager
-        current_session_id = session_manager.get_current_session_id()
-        current_session = str(current_session_id)
+        # === Session ID über Tool holen (stabiler) ===
+        session_result = call_mcp_tool("get_active_session", {})
+        if isinstance(session_result, str):
+            try:
+                data = json.loads(session_result)
+                if isinstance(data, dict):
+                    current_session = str(data.get("session_id", "?"))
+            except Exception:
+                pass
 
-        # === Context direkt aus DB laden ===
+        # === DB-Context für Fallback laden ===
         db_context = {}
         try:
-            session_data = session_manager.get_session(current_session_id)
-            if session_data:
-                db_context = session_data.get("context", {}) or {}
+            from backend.tools.session_manager import session_manager
+            sid = int(current_session) if current_session.isdigit() else None
+            if sid:
+                session_data = session_manager.get_session(sid)
+                if session_data:
+                    db_context = session_data.get("context", {}) or {}
         except Exception:
             db_context = {}
 
-        # === Persona (zuerst Tool, dann DB-Fallback) ===
+        # === Persona ===
         persona_result = call_mcp_tool("get_active_persona", {})
         if isinstance(persona_result, str):
             try:
@@ -92,7 +100,7 @@ def _get_context_line() -> str:
             if name and str(name).lower().strip() not in ("", "none", "default"):
                 active_persona_name = name
 
-        # === Skill (zuerst Tool, dann DB-Fallback) ===
+        # === Skill ===
         skill_result = call_mcp_tool("get_active_skill", {})
         if isinstance(skill_result, str):
             try:
