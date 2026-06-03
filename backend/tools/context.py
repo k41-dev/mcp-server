@@ -151,23 +151,29 @@ class AgentContext:
         if not session_data:
             return False
 
+        # === Früher Wechsel des current-Session-Pointers (defensiv) ===
+        # Ab diesem Punkt sieht AgentContext.current() bereits die Ziel-Session.
+        # Das verhindert Timing-Probleme beim Restore von Provider/Persona/Skill.
+        old_session_id = self.session_id
+        self.session_id = session_id
+        session_manager.set_current_session_id(session_id)
+
         context = session_data.get("context", {}) or {}
 
-        clear_active_persona(session_id=self.session_id)
-        clear_active_skill(session_id=self.session_id)
-        clear_active_provider(session_id=self.session_id)
+        # Alten transienten State sauber räumen (mit der alten ID)
+        clear_active_persona(session_id=old_session_id)
+        clear_active_skill(session_id=old_session_id)
+        clear_active_provider(session_id=old_session_id)
 
         # === Provider ===
         saved_provider = context.get("provider") if isinstance(context, dict) else None
 
         if saved_provider:
-            # Es gibt einen gespeicherten Provider → diesen wiederherstellen
             set_active_provider(saved_provider, session_id=session_id)
         else:
-            # Kein Provider in dieser Session gespeichert → sauber auf Default
             set_active_provider("xai", session_id=session_id)
 
-        # Persona & Skill wie bisher
+        # Persona & Skill wiederherstellen (in die neue Session)
         if context.get("persona"):
             p = context["persona"]
             set_active_persona(
@@ -184,9 +190,6 @@ class AgentContext:
                 s.get("content", ""), 
                 session_id=session_id
             )
-
-        self.session_id = session_id
-        session_manager.set_current_session_id(session_id)
 
         try:
             from backend.prompt_cache import clear_cache
