@@ -75,10 +75,36 @@ def _log_state_change(data: dict) -> None:
     else:
         logger.debug(f"Event empfangen: {event} → {data}")
 
-
 # Automatisch beim Import abonnieren
 subscribe(EventTypes.PERSONA_ACTIVATED, _log_state_change)
 subscribe(EventTypes.SKILL_ACTIVATED, _log_state_change)
 subscribe(EventTypes.CONTEXT_CLEARED, _log_state_change)
 
 logger.info("✅ Event Bus mit Logging-Subscriber initialisiert")
+
+# ====================== AUTO-PERSIST CONTEXT ON STATE CHANGE ======================
+def _auto_persist_context_on_change(data: dict) -> None:
+    """Speichert den aktuellen Context automatisch in die Session-DB,
+    sobald Persona, Skill oder Provider geändert werden."""
+    from backend.tools.context import AgentContext
+
+    session_id = data.get("session_id")
+    if session_id is None:
+        return
+
+    try:
+        ctx = AgentContext(session_id=session_id)
+        ctx.save_context_to_session()
+    except Exception as e:
+        # Nicht kritisch – nur loggen
+        import logging
+        logging.getLogger("mcp.events").warning(f"Auto-persist context failed for session {session_id}: {e}")
+
+
+# Subscribe to all relevant state changes
+subscribe(EventTypes.PERSONA_ACTIVATED, _auto_persist_context_on_change)
+subscribe(EventTypes.SKILL_ACTIVATED, _auto_persist_context_on_change)
+subscribe(EventTypes.MODEL_CHANGED, _auto_persist_context_on_change)
+subscribe(EventTypes.CONTEXT_CLEARED, _auto_persist_context_on_change)
+
+logger.info("✅ Auto-persist context on state change aktiviert")
