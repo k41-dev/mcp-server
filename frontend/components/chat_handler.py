@@ -515,61 +515,30 @@ def chat_with_agent_streaming(message: str, history: list, model_choice: str):
 # ====================== STATUS & REFRESH ======================
 def get_status(model_choice_value: str = "xAI"):
     try:
-        from backend.tools.session_manager import session_manager
-
-        # Aktuelle Session-ID
-        current_session_id = session_manager.get_current_session_id()
-
-        # DB-Context als Fallback-Quelle
-        db_context = {}
-        try:
-            session_data = session_manager.get_session(current_session_id)
-            if session_data:
-                db_context = session_data.get("context", {}) or {}
-        except Exception:
-            db_context = {}
-
-        # === Persona ===
         persona_result = call_mcp_tool("get_active_persona", {})
         persona_name = "None"
         if isinstance(persona_result, str):
             try:
                 data = json.loads(persona_result)
-                if isinstance(data, dict):
+                if isinstance(data, dict) and "name" in data:
                     name = data.get("name", "")
                     if name and str(name).lower().strip() not in ("", "none", "default"):
                         persona_name = name
-            except Exception:
+            except:
                 pass
 
-        # DB-Fallback
-        if persona_name == "None" and db_context.get("persona"):
-            p = db_context["persona"]
-            name = p.get("name", "")
-            if name and str(name).lower().strip() not in ("", "none", "default"):
-                persona_name = name
-
-        # === Skill ===
         skill_result = call_mcp_tool("get_active_skill", {})
         skill_name = "None"
         if isinstance(skill_result, str):
             try:
                 data = json.loads(skill_result)
-                if isinstance(data, dict):
+                if isinstance(data, dict) and "name" in data:
                     name = data.get("name", "")
                     if name and str(name).lower().strip() not in ("", "none"):
                         skill_name = name
-            except Exception:
+            except:
                 pass
 
-        # DB-Fallback
-        if skill_name == "None" and db_context.get("skill"):
-            s = db_context["skill"]
-            name = s.get("name", "")
-            if name and str(name).lower().strip() not in ("", "none"):
-                skill_name = name
-
-        # Provider & Prompt Version (bleibt wie bisher)
         provider_result = call_mcp_tool("get_active_provider", {})
         provider = "xai"
         if isinstance(provider_result, str):
@@ -577,7 +546,7 @@ def get_status(model_choice_value: str = "xAI"):
                 data = json.loads(provider_result)
                 if isinstance(data, dict):
                     provider = data.get("active_provider", "xai")
-            except Exception:
+            except:
                 pass
 
         model_map = {"xAI": "xai", "OpenAI": "openai", "Anthropic": "anthropic", "Ollama": "ollama"}
@@ -588,7 +557,7 @@ def get_status(model_choice_value: str = "xAI"):
         try:
             tools = get_mcp_tools()
             tool_count = len(tools) if tools else 0
-        except Exception:
+        except:
             tool_count = 0
 
         return (
@@ -597,7 +566,6 @@ def get_status(model_choice_value: str = "xAI"):
             f"🎭 Persona: {persona_name}",
             f"🛠️ Skill: {skill_name}"
         )
-
     except Exception as e:
         return (
             f"❌ Error: {str(e)}",
