@@ -128,46 +128,46 @@ class AgentContext:
         }
 
     def _ensure_context_restored(self) -> None:
-        """Stellt den Context aus der DB wieder her, falls die transienten Werte leer oder unvollständig sind."""
+        """Stellt Persona, Skill und Provider aus der DB immer dann wieder her, wenn sie in der DB gespeichert sind."""
         from backend.tools.state import (
-            get_active_persona, get_active_skill, get_active_provider,
             set_active_persona, set_active_skill, set_active_provider
         )
         from backend.tools.session_manager import session_manager
 
-        session_data = session_manager.get_session(self.session_id)
-        if not session_data:
-            return
+        try:
+            session_data = session_manager.get_session(self.session_id)
+            if not session_data:
+                return
 
-        context = session_data.get("context", {}) or {}
-        if not isinstance(context, dict):
-            return
+            context = session_data.get("context", {}) or {}
+            if not isinstance(context, dict):
+                return
 
-        # Provider immer sicherstellen
-        current_provider = get_active_provider(session_id=self.session_id)
-        if not current_provider:
-            set_active_provider(context.get("provider") or "xai", session_id=self.session_id)
+            # Provider
+            if context.get("provider"):
+                set_active_provider(context["provider"], session_id=self.session_id)
 
-        # Persona
-        current_persona = get_active_persona(session_id=self.session_id)
-        if (not current_persona or not current_persona.get("name")) and context.get("persona"):
-            p = context["persona"]
-            set_active_persona(
-                p.get("name", ""),
-                p.get("instructions", ""),
-                p.get("intensity", 7),
-                session_id=self.session_id
-            )
+            # Persona (immer überschreiben, wenn in DB vorhanden)
+            if context.get("persona"):
+                p = context["persona"]
+                set_active_persona(
+                    p.get("name") or "",
+                    p.get("instructions") or "",
+                    p.get("intensity") or 7,
+                    session_id=self.session_id
+                )
 
-        # Skill
-        current_skill = get_active_skill(session_id=self.session_id)
-        if (not current_skill or not current_skill.get("name")) and context.get("skill"):
-            s = context["skill"]
-            set_active_skill(
-                s.get("name", ""),
-                s.get("content", ""),
-                session_id=self.session_id
-            )
+            # Skill (immer überschreiben, wenn in DB vorhanden)
+            if context.get("skill"):
+                s = context["skill"]
+                set_active_skill(
+                    s.get("name") or "",
+                    s.get("content") or "",
+                    session_id=self.session_id
+                )
+        except Exception:
+            # Nicht den gesamten Header-Generierungs-Pfad zerstören
+            pass
 
     def __repr__(self) -> str:
         names = self.get_active_names()
