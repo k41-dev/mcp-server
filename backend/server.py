@@ -451,25 +451,25 @@ async def health_check(
         }
 
 
-# ====================== DEFAULT PROVIDER INITIALIZATION ======================
-_initial_provider = _get_active_provider()
-if not _initial_provider:
-    default_provider = (settings.DEFAULT_MODEL_PROVIDER or "xai").lower().strip()
-    if default_provider not in ("xai", "ollama", "openai", "anthropic"):
-        default_provider = "xai"
-    _set_active_provider(default_provider)
-    logger.info(f"✅ Default provider initialized on startup: {default_provider}")
-
-
 # ====================== DEFAULT SESSION CONTEXT RESTORE ======================
 try:
     from backend.tools.context import AgentContext
     from backend.memory import DEFAULT_SESSION_ID
+    from backend.tools.state import get_active_provider, set_active_provider
+
     ctx = AgentContext(session_id=DEFAULT_SESSION_ID)
     ctx._ensure_context_restored()
-    logger.info("✅ Default session context restored on startup (if saved context existed)")
+
+    # Falls nach Restore immer noch kein Provider da ist → Default setzen
+    if get_active_provider(session_id=DEFAULT_SESSION_ID) is None:
+        default_provider = (settings.DEFAULT_MODEL_PROVIDER or "xai").lower()
+        if default_provider not in ("xai", "ollama", "openai", "anthropic"):
+            default_provider = "xai"
+        set_active_provider(default_provider, session_id=DEFAULT_SESSION_ID)
+
+    logger.info("✅ Default session context restored on startup")
 except Exception as e:
-    logger.warning(f"Could not restore default session context on startup: {e}")
+    logger.warning(f"Default session context restore on startup failed: {e}")
 
 
 # ====================== MAIN ======================
