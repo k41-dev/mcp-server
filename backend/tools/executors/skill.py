@@ -90,9 +90,11 @@ def set_active_skill(args: Dict[str, Any]) -> Dict[str, Any]:
 
 def get_active_skill(args: Dict[str, Any]) -> Dict[str, Any]:
     from backend.tools.context import AgentContext
-    import json
 
-    skill = AgentContext.current().active_skill
+    ctx = AgentContext.current()
+    ctx._ensure_context_restored()
+
+    skill = ctx.active_skill
     if skill and isinstance(skill, dict):
         return {"content": [{"type": "text", "text": json.dumps(skill)}]}
     else:

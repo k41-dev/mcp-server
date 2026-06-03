@@ -380,28 +380,18 @@ def set_active_provider(args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def get_active_provider(args: Dict[str, Any]) -> Dict[str, Any]:
-    """Gibt den aktuell aktiven Provider zurück."""
-    from backend.tools.state import get_active_provider as _get_active_provider
     from backend.tools.context import AgentContext
-    import json
 
-    try:
-        ctx = AgentContext.current()
-        provider = _get_active_provider(session_id=ctx.session_id)
+    ctx = AgentContext.current()
+    ctx._ensure_context_restored()          # ← NEU
 
-        if provider:
-            return {
-                "content": [{"type": "text", "text": json.dumps({"active_provider": provider})}]
-            }
-        else:
-            return {
-                "content": [{"type": "text", "text": "No active provider set (using default)."}]
-            }
-    except Exception as e:
-        return {
-            "content": [{"type": "text", "text": f"Error getting active provider: {str(e)}"}],
-            "isError": True
-        }
+    from backend.tools.state import get_active_provider as _get_active_provider
+
+    provider = _get_active_provider(session_id=ctx.session_id)
+    if provider:
+        return {"content": [{"type": "text", "text": json.dumps({"active_provider": provider})}]}
+    else:
+        return {"content": [{"type": "text", "text": "No active provider set (using default)."}]}
 
 
 def clear_active_provider(args: Dict[str, Any]) -> Dict[str, Any]:
