@@ -17,8 +17,8 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # ====================== HELPER ======================
 def _build_response_header() -> str:
-    """Erzeugt einen frischen, robusten Header direkt aus dem Backend-State.
-    Wird bei jeder finalen Assistant-Antwort und beim History-Reload aufgerufen.
+    """Erzeugt einen frischen Header mit Model + Context-Line.
+    Robust gegen temporäre Fehler nach Session-Wechseln.
     """
     model_display = os.getenv("XAI_MODEL", "grok")
     context_line = ""
@@ -39,13 +39,14 @@ def _build_response_header() -> str:
     except Exception:
         pass
 
-    # === 2. Context-Line (separat & defensiv — nie komplett verlieren) ===
+    # === 2. Context-Line separat und robust bauen ===
     try:
         context_line = _get_context_line()
     except Exception:
         context_line = ""
 
     header = f"**{model_display}**"
+
     if context_line and context_line.strip():
         header += "\n*" + context_line.strip() + "*"
 
@@ -53,9 +54,8 @@ def _build_response_header() -> str:
 
 
 def _get_context_line() -> str:
-    """Holt aktive Persona + Skill + aktuelle Session.
-    Garantiert: Es wird immer mindestens die Session-Zeile zurückgegeben.
-    Persona/Skill nur, wenn sie wirklich aktiv und nicht "None" sind.
+    """Baut die Context-Zeile (Persona • Skill • Session).
+    Garantiert mindestens die Session-Zeile. Sehr defensiv.
     """
     active_persona_name = ""
     active_skill_name = ""
@@ -72,26 +72,26 @@ def _get_context_line() -> str:
             except Exception:
                 pass
 
-        # Persona (nur wenn wirklich aktiv)
+        # Persona
         persona_result = call_mcp_tool("get_active_persona", {})
         if isinstance(persona_result, str):
             try:
                 data = json.loads(persona_result)
                 if isinstance(data, dict):
                     name = data.get("name", "")
-                    if name and name.lower() not in ("", "none", "default"):
+                    if name and str(name).lower().strip() not in ("", "none", "default"):
                         active_persona_name = name
             except Exception:
                 pass
 
-        # Skill (nur wenn wirklich aktiv)
+        # Skill
         skill_result = call_mcp_tool("get_active_skill", {})
         if isinstance(skill_result, str):
             try:
                 data = json.loads(skill_result)
                 if isinstance(data, dict):
                     name = data.get("name", "")
-                    if name and name.lower() not in ("", "none"):
+                    if name and str(name).lower().strip() not in ("", "none"):
                         active_skill_name = name
             except Exception:
                 pass
