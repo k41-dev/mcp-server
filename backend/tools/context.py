@@ -128,9 +128,7 @@ class AgentContext:
         }
 
     def _ensure_context_restored(self) -> None:
-        """Stellt gespeicherten Context (Persona, Skill, Provider) aus der DB
-        wieder her – aber nur die Komponenten, die noch nicht im transienten State sind.
-        Wird lazy beim Zugriff auf AgentContext.current() aufgerufen."""
+        """Stellt fehlende Teile des Context aus der DB wieder her (lazy)."""
         from backend.tools.state import (
             get_active_persona, get_active_skill, get_active_provider,
             set_active_persona, set_active_skill, set_active_provider
@@ -140,37 +138,24 @@ class AgentContext:
         session_data = session_manager.get_session(self.session_id)
         if not session_data:
             return
-
         context = session_data.get("context", {}) or {}
         if not isinstance(context, dict):
             return
 
-        # === Provider (nur wenn noch nicht gesetzt) ===
+        # Provider
         if get_active_provider(session_id=self.session_id) is None:
-            saved_provider = context.get("provider")
-            if saved_provider:
-                set_active_provider(saved_provider, session_id=self.session_id)
-            else:
-                set_active_provider("xai", session_id=self.session_id)
+            prov = context.get("provider") or "xai"
+            set_active_provider(prov, session_id=self.session_id)
 
-        # === Persona (nur wenn noch nicht gesetzt) ===
+        # Persona
         if get_active_persona(session_id=self.session_id) is None and context.get("persona"):
             p = context["persona"]
-            set_active_persona(
-                p.get("name", ""),
-                p.get("instructions", ""),
-                p.get("intensity", 7),
-                session_id=self.session_id
-            )
+            set_active_persona(p.get("name", ""), p.get("instructions", ""), p.get("intensity", 7), session_id=self.session_id)
 
-        # === Skill (nur wenn noch nicht gesetzt) ===
+        # Skill
         if get_active_skill(session_id=self.session_id) is None and context.get("skill"):
             s = context["skill"]
-            set_active_skill(
-                s.get("name", ""),
-                s.get("content", ""),
-                session_id=self.session_id
-            )
+            set_active_skill(s.get("name", ""), s.get("content", ""), session_id=self.session_id)
 
     def __repr__(self) -> str:
         names = self.get_active_names()

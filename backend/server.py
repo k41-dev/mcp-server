@@ -25,6 +25,17 @@ from backend.dependencies import AgentContextDep, RegistryDep, SettingsDep
 from backend.tools.state import get_active_provider as _get_active_provider, set_active_provider as _set_active_provider
 
 
+# ====================== STARTUP: DEFAULT SESSION CONTEXT ======================
+try:
+    from backend.tools.context import AgentContext
+    from backend.memory import DEFAULT_SESSION_ID
+    ctx = AgentContext(session_id=DEFAULT_SESSION_ID)
+    ctx._ensure_context_restored()
+    logger.info("✅ Default session context restored on startup")
+except Exception as e:
+    logger.warning(f"Startup context restore failed: {e}")
+
+
 # ====================== LOGGING ======================
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("mcp-log")
