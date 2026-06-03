@@ -461,6 +461,17 @@ if not _initial_provider:
     logger.info(f"✅ Default provider initialized on startup: {default_provider}")
 
 
+# ====================== DEFAULT SESSION CONTEXT RESTORE ======================
+try:
+    from backend.tools.context import AgentContext
+    from backend.memory import DEFAULT_SESSION_ID
+    ctx = AgentContext(session_id=DEFAULT_SESSION_ID)
+    ctx._ensure_context_restored()
+    logger.info("✅ Default session context restored on startup (if saved context existed)")
+except Exception as e:
+    logger.warning(f"Could not restore default session context on startup: {e}")
+
+
 # ====================== MAIN ======================
 if __name__ == "__main__":
     import uvicorn

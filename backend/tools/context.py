@@ -127,6 +127,54 @@ class AgentContext:
             "summary": self.get_context_summary(),
         }
 
+    def _ensure_context_restored(self) -> None:
+        """Stellt den gespeicherten Context aus der DB wieder her,
+        falls der transient State für diese Session leer ist.
+        Wird lazy beim ersten Zugriff aufgerufen."""
+        from backend.tools.state import (
+            get_active_persona, get_active_skill, get_active_provider,
+            set_active_persona, set_active_skill, set_active_provider
+        )
+        from backend.tools.session_manager import session_manager
+
+        # Nur restaurieren, wenn noch nichts im transient State steht
+        if (get_active_persona(session_id=self.session_id) is None and
+            get_active_skill(session_id=self.session_id) is None and
+            get_active_provider(session_id=self.session_id) is None):
+
+            session_data = session_manager.get_session(self.session_id)
+            if not session_data:
+                return
+
+            context = session_data.get("context", {}) or {}
+            if not isinstance(context, dict) or not context:
+                return
+
+            # Provider
+            if context.get("provider"):
+                set_active_provider(context["provider"], session_id=self.session_id)
+            else:
+                set_active_provider("xai", session_id=self.session_id)
+
+            # Persona
+            if context.get("persona"):
+                p = context["persona"]
+                set_active_persona(
+                    p.get("name", ""),
+                    p.get("instructions", ""),
+                    p.get("intensity", 7),
+                    session_id=self.session_id
+                )
+
+            # Skill
+            if context.get("skill"):
+                s = context["skill"]
+                set_active_skill(
+                    s.get("name", ""),
+                    s.get("content", ""),
+                    session_id=self.session_id
+                )
+
     def __repr__(self) -> str:
         names = self.get_active_names()
         return (
@@ -220,9 +268,10 @@ class AgentContext:
     # ====================== CLASSMETHODS ======================
     @classmethod
     def current(cls) -> "AgentContext":
-        """Gibt eine AgentContext-Instanz für die aktuell aktive Session zurück."""
         from backend.tools.session_manager import session_manager
-        return cls(session_id=session_manager.get_current_session_id())
+        ctx = cls(session_id=session_manager.get_current_session_id())
+        ctx._ensure_context_restored() 
+        return ctx
 
 
 # ====================== GLOBAL DEFAULT INSTANCE ======================
