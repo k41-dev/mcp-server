@@ -218,6 +218,7 @@ def load_chat_history_for_current_session():
                             "content": "[Tool result received]"
                         })
                     else:
+                        # Einfach so lassen wie gespeichert (Header bleibt erhalten!)
                         cleaned.append(msg)
                 return cleaned
         except Exception:
