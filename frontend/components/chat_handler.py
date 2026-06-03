@@ -18,87 +18,82 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 # ====================== HELPER ======================
 def _build_response_header() -> str:
     """Erzeugt einen frischen, robusten Header direkt aus dem Backend-State.
-    Wird bei jeder finalen Assistant-Antwort aufgerufen.
+    Wird bei jeder finalen Assistant-Antwort und beim History-Reload aufgerufen.
     """
-    model_display = None
-    context_parts = []
+    model_display = os.getenv("XAI_MODEL", "grok")
+    context_line = ""
 
+    # === 1. Provider / Model (defensiv) ===
     try:
-        # === 1. Aktiven Provider + Model holen ===
         provider_result = call_mcp_tool("get_active_provider", {})
         if isinstance(provider_result, str):
             data = json.loads(provider_result)
             prov = data.get("active_provider", "xai").lower()
-
             model_map = {
                 "xai": os.getenv("XAI_MODEL", "grok"),
                 "ollama": os.getenv("OLLAMA_MODEL", "llama3.1:latest"),
                 "openai": os.getenv("OPENAI_MODEL", "gpt-4o"),
                 "anthropic": os.getenv("ANTHROPIC_MODEL", "claude"),
             }
-            model_display = model_map.get(prov, os.getenv("XAI_MODEL", "grok"))
+            model_display = model_map.get(prov, model_display)
+    except Exception:
+        pass
 
-        # === 2. Context-Line frisch holen ===
+    # === 2. Context-Line (separat & defensiv — nie komplett verlieren) ===
+    try:
         context_line = _get_context_line()
-        if context_line and context_line.strip():
-            context_parts.append(context_line)
-
-    except Exception as e:
-        # Im Fehlerfall trotzdem einen Header bauen
-        model_display = os.getenv("XAI_MODEL", "grok")
-
-    # Fallback falls model_display nicht gesetzt wurde
-    if not model_display:
-        model_display = os.getenv("XAI_MODEL", "grok")
+    except Exception:
+        context_line = ""
 
     header = f"**{model_display}**"
-
-    if context_parts:
-        header += "\n*" + " • ".join(context_parts) + "*"
+    if context_line and context_line.strip():
+        header += "\n*" + context_line.strip() + "*"
 
     return header
 
 
 def _get_context_line() -> str:
-    """Holt aktive Persona + Skill + aktuelle Session und baut eine saubere Context-Line.
-    Zeigt immer mindestens die Session. Persona und Skill nur, wenn sie wirklich aktiv sind.
+    """Holt aktive Persona + Skill + aktuelle Session.
+    Garantiert: Es wird immer mindestens die Session-Zeile zurückgegeben.
+    Persona/Skill nur, wenn sie wirklich aktiv und nicht "None" sind.
     """
     active_persona_name = ""
     active_skill_name = ""
     current_session = "?"
 
     try:
-        # Aktive Session
+        # Session
         session_result = call_mcp_tool("get_active_session", {})
         if isinstance(session_result, str):
             try:
                 session_data = json.loads(session_result)
-                current_session = session_data.get("session_id", "?")
-            except:
+                if isinstance(session_data, dict):
+                    current_session = str(session_data.get("session_id", "?"))
+            except Exception:
                 pass
 
-        # Persona (nur setzen, wenn wirklich aktiv)
+        # Persona (nur wenn wirklich aktiv)
         persona_result = call_mcp_tool("get_active_persona", {})
         if isinstance(persona_result, str):
             try:
                 data = json.loads(persona_result)
                 if isinstance(data, dict):
                     name = data.get("name", "")
-                    if name and name.lower() != "none":
+                    if name and name.lower() not in ("", "none", "default"):
                         active_persona_name = name
-            except:
+            except Exception:
                 pass
 
-        # Skill (nur setzen, wenn wirklich aktiv)
+        # Skill (nur wenn wirklich aktiv)
         skill_result = call_mcp_tool("get_active_skill", {})
         if isinstance(skill_result, str):
             try:
                 data = json.loads(skill_result)
                 if isinstance(data, dict):
                     name = data.get("name", "")
-                    if name and name.lower() != "none":
+                    if name and name.lower() not in ("", "none"):
                         active_skill_name = name
-            except:
+            except Exception:
                 pass
 
     except Exception:
