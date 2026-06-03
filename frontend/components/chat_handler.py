@@ -486,26 +486,41 @@ def chat_with_agent_streaming(message: str, history: list, model_choice: str):
 # ====================== STATUS & REFRESH ======================
 def get_status(model_choice_value: str = "xAI"):
     try:
+        # === Force Restore (falls nach Session-Wechsel der State noch nicht da ist) ===
+        try:
+            from backend.tools.context import AgentContext
+            ctx = AgentContext.current()
+            ctx._ensure_context_restored()
+        except Exception:
+            pass
+
+        # === Persona ===
         persona_result = call_mcp_tool("get_active_persona", {})
         persona_name = "None"
         if isinstance(persona_result, str):
             try:
                 data = json.loads(persona_result)
                 if isinstance(data, dict) and "name" in data:
-                    persona_name = data.get("name", "None")
-            except:
+                    name = data.get("name", "")
+                    if name and str(name).lower().strip() not in ("", "none", "default"):
+                        persona_name = name
+            except Exception:
                 pass
 
+        # === Skill ===
         skill_result = call_mcp_tool("get_active_skill", {})
         skill_name = "None"
         if isinstance(skill_result, str):
             try:
                 data = json.loads(skill_result)
                 if isinstance(data, dict) and "name" in data:
-                    skill_name = data.get("name", "None")
-            except:
+                    name = data.get("name", "")
+                    if name and str(name).lower().strip() not in ("", "none"):
+                        skill_name = name
+            except Exception:
                 pass
 
+        # === Provider ===
         provider_result = call_mcp_tool("get_active_provider", {})
         provider = "xai"
         if isinstance(provider_result, str):
@@ -513,7 +528,7 @@ def get_status(model_choice_value: str = "xAI"):
                 data = json.loads(provider_result)
                 if isinstance(data, dict):
                     provider = data.get("active_provider", "xai")
-            except:
+            except Exception:
                 pass
 
         model_map = {"xAI": "xai", "OpenAI": "openai", "Anthropic": "anthropic", "Ollama": "ollama"}
@@ -524,7 +539,7 @@ def get_status(model_choice_value: str = "xAI"):
         try:
             tools = get_mcp_tools()
             tool_count = len(tools) if tools else 0
-        except:
+        except Exception:
             tool_count = 0
 
         return (
