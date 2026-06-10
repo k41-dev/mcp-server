@@ -191,10 +191,8 @@ class AgentContext:
 
         old_session_id = self.session_id
 
-        # Alten Context sichern
         self.save_context_to_session()
 
-        # Ziel-Session laden
         session_data = session_manager.get_session(session_id)
         if not session_data:
             return False
@@ -203,16 +201,16 @@ class AgentContext:
         if not isinstance(context, dict):
             context = {}
 
-        # Alten transienten State der alten Session löschen
+        # Alten transienten State der alten Session sauber löschen
         clear_active_persona(session_id=old_session_id)
         clear_active_skill(session_id=old_session_id)
         clear_active_provider(session_id=old_session_id)
 
-        # === Provider (immer setzen) ===
+        # Provider immer setzen (hat immer einen Default)
         provider = context.get("provider") or "xai"
         set_active_provider(provider, session_id=session_id)
 
-        # === Persona: Nur setzen, wenn ein valider Name vorhanden ist ===
+        # Persona nur setzen, wenn ein *valider* Name vorhanden ist
         if context.get("persona"):
             p = context["persona"]
             name = p.get("name", "")
@@ -224,7 +222,7 @@ class AgentContext:
                     session_id=session_id
                 )
 
-        # === Skill: Nur setzen, wenn ein valider Name vorhanden ist ===
+        # Skill nur setzen, wenn ein *valider* Name vorhanden ist
         if context.get("skill"):
             s = context["skill"]
             name = s.get("name", "")
@@ -235,7 +233,6 @@ class AgentContext:
                     session_id=session_id
                 )
 
-        # Session-ID aktualisieren
         self.session_id = session_id
         session_manager.set_current_session_id(session_id)
 
