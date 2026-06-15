@@ -11,12 +11,6 @@ Jetzt vollständig session-fähig vorbereitet für Multi-Session / Multi-Agent.
 
 import os
 from typing import Optional, Dict, Any
-from backend.tools.state import (
-    get_active_persona as _get_active_persona,
-    get_active_skill as _get_active_skill,
-    get_active_provider as _get_active_provider,
-    get_active_model as _get_active_model,
-)
 from backend.memory import DEFAULT_SESSION_ID
 
 
@@ -30,29 +24,27 @@ class AgentContext:
     def __init__(self, session_id: int = DEFAULT_SESSION_ID):
         self.session_id = session_id
 
-    # ====================== PROPERTIES ======================
+    # ====================== PROPERTIES (lesen immer aus der DB) ======================
     @property
     def active_persona(self) -> Optional[Dict[str, Any]]:
-        """Gibt die aktuell aktive Persona der Session zurück (immer aus DB)."""
+        """Gibt die aktuell aktive Persona der Session zurück (direkt aus DB)."""
         try:
             from backend.tools.session_manager import session_manager
             session_data = session_manager.get_session(self.session_id)
             if session_data:
-                context = session_data.get("context", {}) or {}
-                return context.get("persona")
+                return (session_data.get("context") or {}).get("persona")
         except Exception:
             pass
         return None
 
     @property
     def active_skill(self) -> Optional[Dict[str, Any]]:
-        """Gibt den aktuell aktiven Skill der Session zurück (immer aus DB)."""
+        """Gibt den aktuell aktiven Skill der Session zurück (direkt aus DB)."""
         try:
             from backend.tools.session_manager import session_manager
             session_data = session_manager.get_session(self.session_id)
             if session_data:
-                context = session_data.get("context", {}) or {}
-                return context.get("skill")
+                return (session_data.get("context") or {}).get("skill")
         except Exception:
             pass
         return None
@@ -67,13 +59,12 @@ class AgentContext:
 
     @property
     def provider(self) -> Optional[str]:
-        """Gibt den aktuell aktiven Provider der Session zurück (immer aus DB)."""
+        """Gibt den aktuell aktiven Provider der Session zurück (direkt aus DB)."""
         try:
             from backend.tools.session_manager import session_manager
             session_data = session_manager.get_session(self.session_id)
             if session_data:
-                context = session_data.get("context", {}) or {}
-                return context.get("provider") or "xai"
+                return (session_data.get("context") or {}).get("provider") or "xai"
         except Exception:
             pass
         return "xai"
@@ -85,9 +76,7 @@ class AgentContext:
             from backend.tools.session_manager import session_manager
             session_data = session_manager.get_session(self.session_id)
             if session_data:
-                context = session_data.get("context", {}) or {}
-                prov = context.get("provider") or "xai"
-                # Hier kannst du später die Model-Map aus settings holen
+                prov = (session_data.get("context") or {}).get("provider") or "xai"
                 model_map = {
                     "xai": os.getenv("XAI_MODEL", "grok-4.3"),
                     "ollama": os.getenv("OLLAMA_MODEL", "llama3.1"),
@@ -165,47 +154,6 @@ class AgentContext:
             "summary": self.get_context_summary(),
         }
 
-    def _ensure_context_restored(self) -> None:
-        """Stellt Persona, Skill und Provider aus der DB immer dann wieder her, wenn sie in der DB gespeichert sind."""
-        from backend.tools.state import (
-            set_active_persona, set_active_skill, set_active_provider
-        )
-        from backend.tools.session_manager import session_manager
-
-        try:
-            session_data = session_manager.get_session(self.session_id)
-            if not session_data:
-                return
-
-            context = session_data.get("context", {}) or {}
-            if not isinstance(context, dict):
-                return
-
-            # Provider
-            if context.get("provider"):
-                set_active_provider(context["provider"], session_id=self.session_id)
-
-            # Persona (immer überschreiben, wenn in DB vorhanden)
-            if context.get("persona"):
-                p = context["persona"]
-                set_active_persona(
-                    p.get("name") or "",
-                    p.get("instructions") or "",
-                    p.get("intensity") or 7,
-                    session_id=self.session_id
-                )
-
-            # Skill (immer überschreiben, wenn in DB vorhanden)
-            if context.get("skill"):
-                s = context["skill"]
-                set_active_skill(
-                    s.get("name") or "",
-                    s.get("content") or "",
-                    session_id=self.session_id
-                )
-        except Exception:
-            # Nicht den gesamten Header-Generierungs-Pfad zerstören
-            pass
 
     def __repr__(self) -> str:
         names = self.get_active_names()
