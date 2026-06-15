@@ -24,18 +24,35 @@ def set_active_persona(
     intensity: int = 7,
     session_id: int = DEFAULT_SESSION_ID
 ) -> None:
-    """Setzt eine aktive Persona für eine bestimmte Session."""
+    """Setzt eine aktive Persona für eine bestimmte Session und schreibt sie direkt in die DB."""
+    # 1. Transienten State aktualisieren (wie bisher)
     _active_persona[session_id] = {
         "name": persona_name.lower().strip(),
         "instructions": instructions.strip(),
         "intensity": max(1, min(10, intensity)),
         "timestamp": __import__("datetime").datetime.utcnow().isoformat() + "Z"
     }
+
+    # 2. Event publishen (für bestehende Listener)
     publish(EventTypes.PERSONA_ACTIVATED, {
         "persona_name": persona_name.lower().strip(),
         "intensity": intensity,
         "session_id": session_id
     })
+
+    # 3. Direkt in die DB schreiben (Write-Through)
+    try:
+        from backend.tools.session_manager import session_manager
+        session_data = session_manager.get_session(session_id) or {}
+        context = session_data.get("context", {}) or {}
+
+        context["persona"] = _active_persona[session_id].copy()
+
+        session_manager.update_session_context(session_id, context)
+    except Exception:
+        pass
+
+    # 4. Prompt-Cache leeren
     try:
         from backend.prompt_cache import clear_cache
         clear_cache()
@@ -60,16 +77,33 @@ def set_active_skill(
     content: str,
     session_id: int = DEFAULT_SESSION_ID
 ) -> None:
-    """Setzt einen aktiven Skill für eine bestimmte Session."""
+    """Setzt einen aktiven Skill für eine bestimmte Session und schreibt ihn direkt in die DB."""
+    # 1. Transienten State aktualisieren
     _active_skill[session_id] = {
         "name": skill_name.lower().strip(),
         "content": content.strip(),
         "timestamp": __import__("datetime").datetime.utcnow().isoformat() + "Z"
     }
+
+    # 2. Event publishen
     publish(EventTypes.SKILL_ACTIVATED, {
         "skill_name": skill_name.lower().strip(),
         "session_id": session_id
     })
+
+    # 3. Direkt in die DB schreiben (Write-Through)
+    try:
+        from backend.tools.session_manager import session_manager
+        session_data = session_manager.get_session(session_id) or {}
+        context = session_data.get("context", {}) or {}
+
+        context["skill"] = _active_skill[session_id].copy()
+
+        session_manager.update_session_context(session_id, context)
+    except Exception:
+        pass
+
+    # 4. Prompt-Cache leeren
     try:
         from backend.prompt_cache import clear_cache
         clear_cache()
@@ -93,17 +127,31 @@ def set_active_provider(
     provider: str,
     session_id: int = DEFAULT_SESSION_ID
 ) -> None:
-    """Setzt den aktiven Provider (xai, ollama, openai, anthropic) für eine Session."""
+    """Setzt den aktiven Provider für eine Session und schreibt ihn direkt in die DB."""
     provider = provider.lower().strip()
     if provider not in ("xai", "ollama", "openai", "anthropic"):
         provider = "xai"
 
+    # 1. Transienten State aktualisieren
     _active_provider[session_id] = provider
 
+    # 2. Event publishen
     publish(EventTypes.MODEL_CHANGED, {
         "provider": provider,
         "session_id": session_id
     })
+
+    # 3. Direkt in die DB schreiben (Write-Through)
+    try:
+        from backend.tools.session_manager import session_manager
+        session_data = session_manager.get_session(session_id) or {}
+        context = session_data.get("context", {}) or {}
+
+        context["provider"] = provider
+
+        session_manager.update_session_context(session_id, context)
+    except Exception:
+        pass
 
 
 def get_active_provider(session_id: int = DEFAULT_SESSION_ID) -> Optional[str]:
