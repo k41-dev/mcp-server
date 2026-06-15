@@ -9,6 +9,7 @@ Laufzeit-Kontext brauchen (prompt_builder, server, Tools, Logging).
 Jetzt vollständig session-fähig vorbereitet für Multi-Session / Multi-Agent.
 """
 
+import os
 from typing import Optional, Dict, Any
 from backend.tools.state import (
     get_active_persona as _get_active_persona,
@@ -32,13 +33,29 @@ class AgentContext:
     # ====================== PROPERTIES ======================
     @property
     def active_persona(self) -> Optional[Dict[str, Any]]:
-        """Gibt die aktuell aktive Persona der Session zurück oder None."""
-        return _get_active_persona(session_id=self.session_id)
+        """Gibt die aktuell aktive Persona der Session zurück (immer aus DB)."""
+        try:
+            from backend.tools.session_manager import session_manager
+            session_data = session_manager.get_session(self.session_id)
+            if session_data:
+                context = session_data.get("context", {}) or {}
+                return context.get("persona")
+        except Exception:
+            pass
+        return None
 
     @property
     def active_skill(self) -> Optional[Dict[str, Any]]:
-        """Gibt den aktuell aktiven Skill der Session zurück oder None."""
-        return _get_active_skill(session_id=self.session_id)
+        """Gibt den aktuell aktiven Skill der Session zurück (immer aus DB)."""
+        try:
+            from backend.tools.session_manager import session_manager
+            session_data = session_manager.get_session(self.session_id)
+            if session_data:
+                context = session_data.get("context", {}) or {}
+                return context.get("skill")
+        except Exception:
+            pass
+        return None
 
     @property
     def has_active_skill(self) -> bool:
@@ -50,16 +67,37 @@ class AgentContext:
 
     @property
     def provider(self) -> Optional[str]:
-        """Gibt den aktuell aktiven Provider der Session zurück."""
-        return _get_active_provider(session_id=self.session_id)
+        """Gibt den aktuell aktiven Provider der Session zurück (immer aus DB)."""
+        try:
+            from backend.tools.session_manager import session_manager
+            session_data = session_manager.get_session(self.session_id)
+            if session_data:
+                context = session_data.get("context", {}) or {}
+                return context.get("provider") or "xai"
+        except Exception:
+            pass
+        return "xai"
 
     @property
     def active_model(self) -> Optional[str]:
-        """
-        Gibt den **konkreten Modellnamen** der Session zurück,
-        basierend auf dem aktiven Provider.
-        """
-        return _get_active_model(session_id=self.session_id)
+        """Gibt den konkreten Modellnamen zurück (basierend auf Provider aus DB)."""
+        try:
+            from backend.tools.session_manager import session_manager
+            session_data = session_manager.get_session(self.session_id)
+            if session_data:
+                context = session_data.get("context", {}) or {}
+                prov = context.get("provider") or "xai"
+                # Hier kannst du später die Model-Map aus settings holen
+                model_map = {
+                    "xai": os.getenv("XAI_MODEL", "grok-4.3"),
+                    "ollama": os.getenv("OLLAMA_MODEL", "llama3.1"),
+                    "openai": os.getenv("OPENAI_MODEL", "gpt-4o"),
+                    "anthropic": os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet"),
+                }
+                return model_map.get(prov.lower(), "grok-3")
+        except Exception:
+            pass
+        return os.getenv("XAI_MODEL", "grok-3")
 
     # ====================== CONVENIENCE ======================
     def get_prompt_injection(self) -> str:
