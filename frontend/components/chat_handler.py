@@ -334,6 +334,10 @@ def _chat_with_agent_generator(message: str, history: list, model_choice: str):
             if tool_steps:
                 final_msg += "\n\n" + "\n".join(tool_steps)
 
+            # === NEU: Stabiler Marker für spätere Header-Erkennung ===
+            final_msg += "\n<!--SESSION_HEADER_END-->"
+
+                
             # Sauberes Speichern
             _save_final_assistant_message(
                 content=content,

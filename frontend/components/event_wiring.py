@@ -192,6 +192,7 @@ def load_chat_history_for_current_session():
     from .mcp_client import call_mcp_tool
     from .chat_handler import _build_response_header
     import json
+    import re
 
     result = call_mcp_tool("list_chat_history", {"limit": 60, "format": "gradio"})
 
@@ -200,39 +201,32 @@ def load_chat_history_for_current_session():
             data = json.loads(result)
             if isinstance(data, list):
                 cleaned = []
-                full_header = _build_response_header()
-                is_first_assistant_after_user = True
+                header = _build_response_header()
 
                 for msg in data:
-                    if msg.get("role") == "user":
-                        is_first_assistant_after_user = True
-                        cleaned.append(msg)
-
-                    elif msg.get("role") == "tool":
+                    if msg.get("role") == "tool":
                         cleaned.append({
                             "role": "assistant",
                             "content": "[Tool result received]"
                         })
-
                     elif msg.get("role") == "assistant":
                         content = str(msg.get("content", "")).strip()
 
-                        if is_first_assistant_after_user:
-                            # Nur die erste Assistant-Nachricht nach einem User-Input bekommt den vollen Header
+                        # === NEU: Robuste Header-Erkennung via Marker ===
+                        if "<!--SESSION_HEADER_END-->" in content:
+                            # Alles vor dem Marker abschneiden (inkl. altem Header)
+                            content = content.split("<!--SESSION_HEADER_END-->")[-1].strip()
+                        else:
+                            # Fallback für alte Nachrichten ohne Marker
                             lines = content.split("\n")
-                            # Alten Header entfernen (falls vorhanden)
                             start = 0
                             if lines and lines[0].strip().startswith("**"):
                                 start = 1
-                                if len(lines) > 1 and any(x in lines[1] for x in ["🎭", "🛠️", "📍"]):
+                                if len(lines) > 1 and lines[1].strip().startswith(("*🎭", "*🛠️", "*📍")):
                                     start = 2
-                            cleaned_content = "\n".join(lines[start:]).strip()
+                            content = "\n".join(lines[start:]).strip()
 
-                            final_content = f"{full_header}\n\n{cleaned_content}".strip() if cleaned_content else full_header
-                            is_first_assistant_after_user = False
-                        else:
-                            # Alle weiteren Assistant-Nachrichten (z.B. nach Tool) bekommen keinen vollen Header
-                            final_content = content
+                        final_content = f"{header}\n\n{content}".strip()
 
                         cleaned.append({
                             "role": "assistant",
