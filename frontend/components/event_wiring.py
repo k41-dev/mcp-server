@@ -638,12 +638,12 @@ def wire_sessions_panel(
         ]
     ).then(
         lambda: "",   # Namensfeld leeren
-        outputs=[new_session_name]
+        outputs=[session_identifier]
     )
 
     delete_session_btn.click(
         fn=delete_session_by_input,
-        inputs=[new_session_name],
+        inputs=[session_identifier],
         outputs=[session_info, session_dropdown]
     ).then(
         lambda: "",
