@@ -146,7 +146,7 @@ def create_ui():
             skill_dropdown=skill_dropdown,
             memory_box=memory_box,
             chatbot=chatbot,
-            new_session_name=new_session_name,       
+            session_identifier=session_identifier,       
             create_session_btn=create_session_btn,
             delete_session_btn=delete_session_btn,
         )
