@@ -192,6 +192,7 @@ def load_chat_history_for_current_session():
     from .mcp_client import call_mcp_tool
     from .chat_handler import _build_response_header
     import json
+    import re
 
     result = call_mcp_tool("list_chat_history", {"limit": 60, "format": "gradio"})
 
@@ -200,7 +201,7 @@ def load_chat_history_for_current_session():
             data = json.loads(result)
             if isinstance(data, list):
                 cleaned = []
-                header = _build_response_header()   # Frischer Header mit aktuellem Session-State
+                header = _build_response_header()
 
                 for msg in data:
                     if msg.get("role") == "tool":
@@ -211,18 +212,25 @@ def load_chat_history_for_current_session():
                     elif msg.get("role") == "assistant":
                         content = str(msg.get("content", "")).strip()
 
-                        # Alten Header entfernen (falls vorhanden)
+                        # === Aggressives Strippen aller Header-ähnlichen Zeilen ===
                         lines = content.split("\n")
-                        start = 0
-                        if lines and lines[0].strip().startswith("**"):
-                            start = 1
-                            if len(lines) > 1 and lines[1].strip().startswith(("*🎭", "*🛠️", "*📍")):
-                                start = 2
+                        cleaned_lines = []
 
-                        cleaned_content = "\n".join(lines[start:]).strip()
+                        for line in lines:
+                            stripped = line.strip()
+                            # Entferne Zeilen, die wie Header aussehen
+                            if stripped.startswith("**") and stripped.endswith("**"):
+                                continue
+                            if re.match(r"^\*.*[🎭🛠️📍].*\*$", stripped):
+                                continue
+                            if stripped.startswith(("🎭", "🛠️", "📍")):
+                                continue
+                            cleaned_lines.append(line)
 
-                        # Neuen aktuellen Header vorne einfügen
-                        final_content = f"{header}\n\n{cleaned_content}".strip()
+                        cleaned_content = "\n".join(cleaned_lines).strip()
+
+                        # Frischen aktuellen Header vorne einfügen
+                        final_content = f"{header}\n\n{cleaned_content}".strip() if cleaned_content else header
 
                         cleaned.append({
                             "role": "assistant",
