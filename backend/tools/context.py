@@ -187,20 +187,26 @@ class AgentContext:
 
     def save_context_to_session(self, session_id: Optional[int] = None) -> bool:
         """
-        Speichert den aktuellen transienten Context (Persona, Skill, Provider)
-        in die angegebene Session (oder in die aktuelle Session).
+        Speichert den aktuellen (transienten) Kontext der Session in die Datenbank.
+        Wird z. B. nach manuellen Änderungen oder vor einem Session-Wechsel aufgerufen.
         """
         from backend.tools.session_manager import session_manager
+        from backend.tools.state import (
+            get_active_persona,
+            get_active_skill,
+            get_active_provider,
+        )
 
         target_session = session_id or self.session_id
 
         context_data = {
-            "persona": self.active_persona,
-            "skill": self.active_skill,
-            "provider": self.provider,
+            "persona": get_active_persona(session_id=target_session),
+            "skill": get_active_skill(session_id=target_session),
+            "provider": get_active_provider(session_id=target_session),
         }
 
         return session_manager.update_session_context(target_session, context_data)
+        
 
     # ====================== CLASSMETHODS ======================
     @classmethod
