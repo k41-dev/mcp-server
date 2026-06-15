@@ -218,62 +218,16 @@ class AgentContext:
 
     # ====================== Session ======================
     def switch_to_session(self, session_id: int) -> bool:
-        from backend.tools.state import (
-            clear_active_persona, clear_active_skill, clear_active_provider,
-            set_active_persona, set_active_skill, set_active_provider
-        )
         from backend.tools.session_manager import session_manager
 
         if session_id == self.session_id:
             return True
 
-        old_session_id = self.session_id
-
-        self.save_context_to_session()
-
-        session_data = session_manager.get_session(session_id)
-        if not session_data:
-            return False
-
-        context = session_data.get("context", {}) or {}
-        if not isinstance(context, dict):
-            context = {}
-
-        # Alten transienten State der alten Session sauber löschen
-        clear_active_persona(session_id=old_session_id)
-        clear_active_skill(session_id=old_session_id)
-        clear_active_provider(session_id=old_session_id)
-
-        # Provider immer setzen (hat immer einen Default)
-        provider = context.get("provider") or "xai"
-        set_active_provider(provider, session_id=session_id)
-
-        # Persona nur setzen, wenn ein *valider* Name vorhanden ist
-        if context.get("persona"):
-            p = context["persona"]
-            name = p.get("name", "")
-            if name and str(name).lower().strip() not in ("", "none", "default"):
-                set_active_persona(
-                    name,
-                    p.get("instructions", ""),
-                    p.get("intensity", 7),
-                    session_id=session_id
-                )
-
-        # Skill nur setzen, wenn ein *valider* Name vorhanden ist
-        if context.get("skill"):
-            s = context["skill"]
-            name = s.get("name", "")
-            if name and str(name).lower().strip() not in ("", "none"):
-                set_active_skill(
-                    name,
-                    s.get("content", ""),
-                    session_id=session_id
-                )
-
+        # Nur noch die Session-ID wechseln – alles andere erledigt die DB
         self.session_id = session_id
         session_manager.set_current_session_id(session_id)
 
+        # Optional: Prompt-Cache leeren (kann man später auch weglassen)
         try:
             from backend.prompt_cache import clear_cache
             clear_cache()
