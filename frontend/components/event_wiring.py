@@ -9,6 +9,7 @@ Kein Backend-Import, keine toten Imports, keine Redundanzen.
 
 import gradio as gr
 import json
+import re
 
 # === Zentrale Refresh-Funktion ===
 from .chat_handler import refresh_ui_state, respond, switch_model_provider
@@ -201,32 +202,42 @@ def load_chat_history_for_current_session():
             data = json.loads(result)
             if isinstance(data, list):
                 cleaned = []
-                header = _build_response_header()
+                full_header = _build_response_header()
+                is_first_assistant_after_user = True
 
                 for msg in data:
-                    if msg.get("role") == "tool":
+                    if msg.get("role") == "user":
+                        is_first_assistant_after_user = True
+                        cleaned.append(msg)
+
+                    elif msg.get("role") == "tool":
                         cleaned.append({
                             "role": "assistant",
                             "content": "[Tool result received]"
                         })
+
                     elif msg.get("role") == "assistant":
                         content = str(msg.get("content", "")).strip()
 
-                        # === NEU: Robuste Header-Erkennung via Marker ===
-                        if "<!--SESSION_HEADER_END-->" in content:
-                            # Alles vor dem Marker abschneiden (inkl. altem Header)
-                            content = content.split("<!--SESSION_HEADER_END-->")[-1].strip()
-                        else:
-                            # Fallback für alte Nachrichten ohne Marker
+                        if is_first_assistant_after_user:
+                            # Nur die erste Assistant-Nachricht nach einem User-Input bekommt den Header
                             lines = content.split("\n")
                             start = 0
+
                             if lines and lines[0].strip().startswith("**"):
                                 start = 1
-                                if len(lines) > 1 and lines[1].strip().startswith(("*🎭", "*🛠️", "*📍")):
+                                # Verbesserte Erkennung der Context-Zeile (auch neue Varianten)
+                                if len(lines) > 1 and any(
+                                    x in lines[1] for x in ["🎭", "🛠️", "📍", "•", "Session"]
+                                ):
                                     start = 2
-                            content = "\n".join(lines[start:]).strip()
 
-                        final_content = f"{header}\n\n{content}".strip()
+                            cleaned_content = "\n".join(lines[start:]).strip()
+                            final_content = f"{full_header}\n\n{cleaned_content}".strip() if cleaned_content else full_header
+                            is_first_assistant_after_user = False
+                        else:
+                            # Alle weiteren Assistant-Nachrichten im gleichen Turn bekommen keinen neuen Header
+                            final_content = content
 
                         cleaned.append({
                             "role": "assistant",
@@ -239,7 +250,7 @@ def load_chat_history_for_current_session():
         except Exception:
             pass
     return []
-    
+
 
 def wire_persona_controls(
     persona_dropdown,

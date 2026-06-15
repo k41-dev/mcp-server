@@ -154,17 +154,24 @@ def _build_tool_status_message(model_display: str, context_line: str, tool_names
 
 # ====================== HELPER ======================
 def _save_final_assistant_message(content: str, tool_steps: list, tool_calls: list, context_line: str = ""):
-    """
-    Speichert die finale Assistant-Antwort.
-    Bei Tool-Nutzung werden die Tool-Namen sauber am Ende der Nachricht gespeichert,
-    damit sie nach einem Session-Wechsel wiederhergestellt werden können.
-    """
     from .mcp_client import call_mcp_tool
+    import re
 
     final_content = (content or "").strip()
 
+    # === Defensives Cleaning vor dem Speichern ===
+    # Entferne eventuell vorhandene Header-Blöcke, falls aus irgendeinem Grund
+    # ein formatierter Block reingekommen ist (Schutz vor Altlasten)
+    if final_content.startswith("**"):
+        # Entferne führende Header + optionale Context-Zeile
+        final_content = re.sub(
+            r'^(\*\*[^*]+\*\*\s*\n\*.*?\*\s*\n+)+',
+            '',
+            final_content,
+            flags=re.DOTALL
+        ).strip()
+
     if tool_steps or tool_calls:
-        # Saubere Liste der verwendeten Tools extrahieren
         used_tools = set()
         for step in tool_steps:
             if "`" in step:
@@ -177,12 +184,11 @@ def _save_final_assistant_message(content: str, tool_steps: list, tool_calls: li
 
         if used_tools:
             tools_list = ",".join(sorted(used_tools))
-            # Strukturierter Marker (wird später beim Laden erkannt)
             final_content += f"\n\n<!--TOOL_USAGE:{tools_list}-->"
 
     if final_content:
         call_mcp_tool("add_chat_turn", {"role": "assistant", "content": final_content})
-
+        
 
 def _prepare_messages(history: list, user_message: str, provider: str = "grok"):
     clean_history = _sanitize_history(history)
@@ -334,10 +340,6 @@ def _chat_with_agent_generator(message: str, history: list, model_choice: str):
             if tool_steps:
                 final_msg += "\n\n" + "\n".join(tool_steps)
 
-            # === NEU: Stabiler Marker für spätere Header-Erkennung ===
-            final_msg += "\n<!--SESSION_HEADER_END-->"
-
-                
             # Sauberes Speichern
             _save_final_assistant_message(
                 content=content,
