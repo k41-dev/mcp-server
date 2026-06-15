@@ -54,13 +54,13 @@ def _build_response_header() -> str:
 
 
 def _get_context_line() -> str:
-    """Stabile Context-Zeile mit DB-Fallback für Persona/Skill."""
+    """Erzeugt die Context-Zeile für den Header (Model + Persona + Skill + Session)."""
     active_persona_name = ""
     active_skill_name = ""
     current_session = "?"
 
     try:
-        # === Session ID über Tool holen (stabiler) ===
+        # Session ID holen
         session_result = call_mcp_tool("get_active_session", {})
         if isinstance(session_result, str):
             try:
@@ -70,60 +70,29 @@ def _get_context_line() -> str:
             except Exception:
                 pass
 
-        # === DB-Context für Fallback laden ===
-        db_context = {}
-        try:
-            from backend.tools.session_manager import session_manager
-            sid = int(current_session) if current_session.isdigit() else None
-            if sid:
-                session_data = session_manager.get_session(sid)
-                if session_data:
-                    db_context = session_data.get("context", {}) or {}
-        except Exception:
-            db_context = {}
+        # Persona
+        persona_result = call_mcp_tool("get_active_persona", {})
+        if isinstance(persona_result, str):
+            try:
+                data = json.loads(persona_result)
+                if isinstance(data, dict):
+                    name = data.get("name", "")
+                    if name and str(name).lower().strip() not in ("", "none", "default"):
+                        active_persona_name = name
+            except Exception:
+                pass
 
-        # === Persona: DB hat Vorrang nach Session-Wechsel ===
-        if db_context.get("persona"):
-            p = db_context["persona"]
-            name = p.get("name", "")
-            if name and str(name).lower().strip() not in ("", "none", "default"):
-                active_persona_name = name
-        else:
-            # Nur wenn nichts in der DB steht, Tool-Wert nehmen
-            persona_result = call_mcp_tool("get_active_persona", {})
-            if isinstance(persona_result, str):
-                try:
-                    data = json.loads(persona_result)
-                    if isinstance(data, dict):
-                        name = data.get("name", "")
-                        if name and str(name).lower().strip() not in ("", "none", "default"):
-                            active_persona_name = name
-                except Exception:
-                    pass
-
-        # === Skill: DB hat Vorrang nach Session-Wechsel ===
-        if db_context.get("skill"):
-            s = db_context["skill"]
-            name = s.get("name", "")
-            if name and str(name).lower().strip() not in ("", "none"):
-                active_skill_name = name
-        else:
-            skill_result = call_mcp_tool("get_active_skill", {})
-            if isinstance(skill_result, str):
-                try:
-                    data = json.loads(skill_result)
-                    if isinstance(data, dict):
-                        name = data.get("name", "")
-                        if name and str(name).lower().strip() not in ("", "none"):
-                            active_skill_name = name
-                except Exception:
-                    pass
-
-        if not active_skill_name and db_context.get("skill"):
-            s = db_context["skill"]
-            name = s.get("name", "")
-            if name and str(name).lower().strip() not in ("", "none"):
-                active_skill_name = name
+        # Skill
+        skill_result = call_mcp_tool("get_active_skill", {})
+        if isinstance(skill_result, str):
+            try:
+                data = json.loads(skill_result)
+                if isinstance(data, dict):
+                    name = data.get("name", "")
+                    if name and str(name).lower().strip() not in ("", "none"):
+                        active_skill_name = name
+            except Exception:
+                pass
 
     except Exception:
         pass
