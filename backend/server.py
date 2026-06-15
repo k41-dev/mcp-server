@@ -105,28 +105,30 @@ app = FastAPI(title="Wäärkzüüg-Chaschte🧰", version="1.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 
 
-
-# ====================== STARTUP EVENT: Default Session Context Restore ======================
+# ====================== STARTUP EVENT ======================
 @app.on_event("startup")
-async def restore_default_session_context():
+async def initialize_default_session():
+    """
+    Stellt sicher, dass die Default-Session beim Start einen Provider hat.
+    Persona und Skill werden nicht mehr manuell restored, da sie
+    direkt aus der DB gelesen und über set_active_* geschrieben werden.
+    """
     try:
-        from backend.tools.context import AgentContext
         from backend.memory import DEFAULT_SESSION_ID
         from backend.tools.state import get_active_provider, set_active_provider
 
-        ctx = AgentContext(session_id=DEFAULT_SESSION_ID)
-        ctx._ensure_context_restored()
-
-        # Fallback Provider nur, wenn wirklich nichts da ist
+        # Nur Provider sicherstellen, falls noch keiner gesetzt ist
         if get_active_provider(session_id=DEFAULT_SESSION_ID) is None:
             default_provider = (settings.DEFAULT_MODEL_PROVIDER or "xai").lower()
             if default_provider not in ("xai", "ollama", "openai", "anthropic"):
                 default_provider = "xai"
             set_active_provider(default_provider, session_id=DEFAULT_SESSION_ID)
+            logger.info(f"✅ Default Provider initialisiert: {default_provider}")
+        else:
+            logger.info("✅ Default Session bereits initialisiert (Provider vorhanden)")
 
-        logger.info("✅ Default session context restored on startup (via FastAPI startup event)")
     except Exception as e:
-        logger.warning(f"Startup context restore failed: {e}")
+        logger.warning(f"Startup Initialisierung fehlgeschlagen: {e}")
 
         
 @app.get("/")
