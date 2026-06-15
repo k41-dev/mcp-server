@@ -484,13 +484,22 @@ def wire_initial_demo_loads(
     persona_dropdown,
     skill_dropdown,
     tool_dropdown,
+    chatbot,
 ):
-    """Verdrahtet alle demo.load() und model_change Events.
+    """Verdrahtet alle demo.load() und model_change Events."""
 
-    Verwendet die zentrale refresh_after_state_change Funktion, damit
-    Status-Bar und System Prompt Viewer immer synchron aktualisiert werden.
-    """
-    # Initial Load: Ein einziger Aufruf für Status + Prompt
+    # === Inner Function (wichtig!) ===
+    def on_model_change(model_choice_value: str):
+        switch_model_provider(model_choice_value)
+
+        try:
+            call_mcp_tool("save_current_context", {})
+        except:
+            pass
+
+        return refresh_after_state_change(model_choice_value)
+
+    # === Initial Load ===
     demo.load(
         refresh_after_state_change,
         inputs=[model_choice],
@@ -503,24 +512,16 @@ def wire_initial_demo_loads(
             model_choice,
             system_prompt_box
         ]
+    ).then(
+        load_chat_history_for_current_session,
+        outputs=[chatbot]
     )
+
     demo.load(load_initial_personas, outputs=[persona_dropdown])
     demo.load(load_initial_skills, outputs=[skill_dropdown])
     demo.load(get_tool_names, outputs=[tool_dropdown])
 
-    def on_model_change(model_choice_value: str):
-        switch_model_provider(model_choice_value)
-
-        # Nach dem Setzen des Providers auch den aktuellen Context in die Session speichern,
-        # damit zukünftige Session-Wechsel den Provider mitnehmen.
-        try:
-            call_mcp_tool("save_current_context", {})
-        except:
-            pass
-
-        return refresh_after_state_change(model_choice_value)
-
-    # Model-Wechsel: Zentrale Funktion statt .then()-Kette
+    # === Model Change ===
     model_choice.change(
         on_model_change,
         inputs=[model_choice],
@@ -534,7 +535,6 @@ def wire_initial_demo_loads(
             system_prompt_box
         ]
     )
-
 
 # ====================== SESSIONS PANEL ======================
 from components.sessions_panel import (
