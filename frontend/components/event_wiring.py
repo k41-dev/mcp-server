@@ -192,7 +192,6 @@ def load_chat_history_for_current_session():
     from .mcp_client import call_mcp_tool
     from .chat_handler import _build_response_header
     import json
-    import re
 
     result = call_mcp_tool("list_chat_history", {"limit": 60, "format": "gradio"})
 
@@ -201,36 +200,39 @@ def load_chat_history_for_current_session():
             data = json.loads(result)
             if isinstance(data, list):
                 cleaned = []
-                header = _build_response_header()
+                full_header = _build_response_header()
+                is_first_assistant_after_user = True
 
                 for msg in data:
-                    if msg.get("role") == "tool":
+                    if msg.get("role") == "user":
+                        is_first_assistant_after_user = True
+                        cleaned.append(msg)
+
+                    elif msg.get("role") == "tool":
                         cleaned.append({
                             "role": "assistant",
                             "content": "[Tool result received]"
                         })
+
                     elif msg.get("role") == "assistant":
                         content = str(msg.get("content", "")).strip()
 
-                        # === Aggressives Strippen aller Header-ähnlichen Zeilen ===
-                        lines = content.split("\n")
-                        cleaned_lines = []
+                        if is_first_assistant_after_user:
+                            # Nur die erste Assistant-Nachricht nach einem User-Input bekommt den vollen Header
+                            lines = content.split("\n")
+                            # Alten Header entfernen (falls vorhanden)
+                            start = 0
+                            if lines and lines[0].strip().startswith("**"):
+                                start = 1
+                                if len(lines) > 1 and any(x in lines[1] for x in ["🎭", "🛠️", "📍"]):
+                                    start = 2
+                            cleaned_content = "\n".join(lines[start:]).strip()
 
-                        for line in lines:
-                            stripped = line.strip()
-                            # Entferne Zeilen, die wie Header aussehen
-                            if stripped.startswith("**") and stripped.endswith("**"):
-                                continue
-                            if re.match(r"^\*.*[🎭🛠️📍].*\*$", stripped):
-                                continue
-                            if stripped.startswith(("🎭", "🛠️", "📍")):
-                                continue
-                            cleaned_lines.append(line)
-
-                        cleaned_content = "\n".join(cleaned_lines).strip()
-
-                        # Frischen aktuellen Header vorne einfügen
-                        final_content = f"{header}\n\n{cleaned_content}".strip() if cleaned_content else header
+                            final_content = f"{full_header}\n\n{cleaned_content}".strip() if cleaned_content else full_header
+                            is_first_assistant_after_user = False
+                        else:
+                            # Alle weiteren Assistant-Nachrichten (z.B. nach Tool) bekommen keinen vollen Header
+                            final_content = content
 
                         cleaned.append({
                             "role": "assistant",
@@ -553,7 +555,7 @@ def wire_sessions_panel(
     skill_dropdown,
     memory_box,
     chatbot,
-    new_session_name,
+    session_identifier,
     create_session_btn,
     delete_session_btn,        
 ):
@@ -617,7 +619,7 @@ def wire_sessions_panel(
 
     create_session_btn.click(
         fn=create_and_switch_to_new_session,
-        inputs=[new_session_name],
+        inputs=[session_identifier],
         outputs=[session_info, session_dropdown]
     ).then(
         refresh_after_session_switch,
@@ -645,7 +647,7 @@ def wire_sessions_panel(
         outputs=[session_info, session_dropdown]
     ).then(
         lambda: "",
-        outputs=[new_session_name]
+        outputs=[session_identifier]
     ).then(
         refresh_after_session_switch,
         inputs=[model_choice],

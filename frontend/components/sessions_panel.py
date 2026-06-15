@@ -87,9 +87,9 @@ def create_sessions_panel():
 
         gr.Markdown("**Neue Session erstellen**")
         with gr.Row():
-            new_session_name = gr.Textbox(
-                label="Session Name (optional)",
-                placeholder="z.B. Projekt XY  oder  Session-ID zum Löschen",
+            session_identifier = gr.Textbox(
+                label="Session Name oder ID",
+                placeholder="z.B. Projekt Bodensee  oder  5 (zum Löschen)",
                 scale=3
             )
             create_session_btn = gr.Button("Create Session", size="sm", variant="secondary")
@@ -100,7 +100,7 @@ def create_sessions_panel():
         session_info, 
         refresh_sessions_btn, 
         switch_session_btn,
-        new_session_name,          
+        session_identifier,          
         create_session_btn,
         delete_session_btn
     )
