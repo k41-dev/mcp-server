@@ -177,6 +177,7 @@ def create_ui():
             skill_dropdown=skill_dropdown,
             tool_dropdown=tool_dropdown,
             chatbot=chatbot,
+            memory_box=memory_box,
         )
 
     return demo

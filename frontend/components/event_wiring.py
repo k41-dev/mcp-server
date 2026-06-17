@@ -485,6 +485,7 @@ def wire_initial_demo_loads(
     skill_dropdown,
     tool_dropdown,
     chatbot,
+    memory_box,
 ):
     """Verdrahtet alle demo.load() und model_change Events."""
 
@@ -515,6 +516,9 @@ def wire_initial_demo_loads(
     ).then(
         load_chat_history_for_current_session,
         outputs=[chatbot]
+    ).then(
+        get_chat_history,           # ← NEU: Chat History automatisch ins Memory Panel laden
+        outputs=[memory_box]
     )
 
     demo.load(load_initial_personas, outputs=[persona_dropdown])
@@ -614,6 +618,9 @@ def wire_sessions_panel(
     ).then(
         load_chat_history_for_current_session,
         outputs=[chatbot]         
+    ).then(
+        get_chat_history,                   
+        outputs=[memory_box]
     )
 
     # === NEU: Session erstellen ===
