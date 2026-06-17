@@ -1,0 +1,10 @@
+{
+  "name": "get_full_context",
+  "description": "Returns a comprehensive overview of the current session context including active persona, skill, provider, model, prompt version, memory stats and recent phase progress. Ideal for debugging and self-inspection.",
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+  },
+  "category": "core"
+}

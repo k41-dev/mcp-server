@@ -50,15 +50,17 @@ services:
       - --url=${NGROK_DOMAIN}
       - --log=stdout
       - --log-level=info
-      - mcp-server:8321
+      - host.docker.internal:5173
     environment:
       - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
       - MCP_PUBLIC_URL=${MCP_PUBLIC_URL}
       - NGROK_DOMAIN=${NGROK_DOMAIN}
     ports:
       - "4042:4040"
-    depends_on:
-      - mcp-server
+    #depends_on:
+    #  - mcp-server
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
     networks:
       app-net:

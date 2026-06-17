@@ -439,3 +439,92 @@ def get_active_model(args: Dict[str, Any]) -> Dict[str, Any]:
             "content": [{"type": "text", "text": f"Error getting active model: {str(e)}"}],
             "isError": True
         }
+
+
+def get_full_context(args: Dict[str, Any]) -> Dict[str, Any]:
+    """Returns a comprehensive, human-readable overview of the current session context."""
+    from backend.tools.context import AgentContext
+    from backend.tools.registry import registry
+    from backend.prompt_builder import get_prompt_version_only
+    from backend.memory import recall_memories
+    import json
+    import datetime
+
+    try:
+        ctx = AgentContext.current()
+        tools_count = len(registry.get_all_definitions())
+
+        # Prompt Version sauber berechnen
+        version = get_prompt_version_only(
+            active_persona=ctx.active_persona,
+            active_skill=ctx.active_skill,
+            tools_count=tools_count,
+            model=ctx.active_model
+        )
+
+        # Memory Stats
+        try:
+            memories = recall_memories(ctx.session_id, query="", limit=50)
+            memory_count = len(memories)
+        except Exception:
+            memory_count = 0
+
+        # Aktive Persona & Skill sauber extrahieren
+        persona_info = None
+        if ctx.active_persona:
+            persona_info = {
+                "name": ctx.active_persona.get("name"),
+                "intensity": ctx.active_persona.get("intensity")
+            }
+
+        skill_info = None
+        if ctx.active_skill:
+            skill_info = {
+                "name": ctx.active_skill.get("name")
+            }
+
+        # Provider & Model
+        provider = ctx.provider or "xai"
+        model = ctx.active_model
+
+        # Zusammenfassung bauen
+        summary_parts = []
+        if model:
+            summary_parts.append(model)
+        if provider:
+            summary_parts.append(f"({provider})")
+        if skill_info:
+            summary_parts.append(skill_info["name"])
+        if persona_info:
+            summary_parts.append(persona_info["name"])
+
+        context_summary = " + ".join(summary_parts) if summary_parts else "Default"
+
+        result = {
+            "session_id": ctx.session_id,
+            "active_provider": provider,
+            "active_model": model,
+            "active_persona": persona_info,
+            "active_skill": skill_info,
+            "prompt_version": version,
+            "tools_loaded": tools_count,
+            "long_term_memories": memory_count,
+            "context_summary": context_summary,
+            "computed_at": datetime.datetime.utcnow().isoformat() + "Z"
+        }
+
+        return {
+            "content": [{
+                "type": "text",
+                "text": json.dumps(result, indent=2, ensure_ascii=False)
+            }]
+        }
+
+    except Exception as e:
+        return {
+            "content": [{
+                "type": "text",
+                "text": f"Error in get_full_context: {str(e)}"
+            }],
+            "isError": True
+        }
