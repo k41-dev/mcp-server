@@ -81,7 +81,7 @@ def create_ui():
                 session_dropdown, session_info, refresh_sessions_btn, switch_session_btn, session_identifier, create_session_btn, delete_session_btn = create_sessions_panel()
 
                 # === Memory Panel ===
-                memory_box, show_lt_btn, clear_lt_btn, show_chat_btn, clear_chat_btn, full_reset_btn = create_memory_panel()
+                memory_box, show_lt_btn, clear_lt_btn, show_chat_btn, clear_chat_btn, full_reset_btn, memory_search_input, search_memory_btn = create_memory_panel()
 
         # ====================== EVENT WIRING (am Ende) ======================
         wire_persona_controls(

@@ -63,9 +63,13 @@ def create_memory_panel():
 
     return (
         memory_box,
-        show_lt_btn, clear_lt_btn,
-        show_chat_btn, clear_chat_btn,
-        full_reset_btn
+        show_lt_btn,
+        clear_lt_btn,
+        show_chat_btn,
+        clear_chat_btn,
+        full_reset_btn,
+        memory_search_input,
+        search_memory_btn         
     )
 
 

@@ -41,6 +41,7 @@ from components.memory_panel import (
     get_chat_history,
     clear_chat_history,
     full_reset,
+    search_long_term_memory,
 )
 
 from components.sessions_panel import (
