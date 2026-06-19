@@ -128,6 +128,8 @@ def create_ui():
             show_chat_btn=show_chat_btn,
             clear_chat_btn=clear_chat_btn,
             full_reset_btn=full_reset_btn,
+            memory_search_input=memory_search_input,   
+            search_memory_btn=search_memory_btn,       
         )
 
         wire_sessions_panel(

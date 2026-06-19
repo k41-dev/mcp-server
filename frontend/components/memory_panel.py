@@ -43,6 +43,16 @@ def create_memory_panel():
             show_lt_btn = gr.Button("Show LT-Memory", size="sm")
             clear_lt_btn = gr.Button("Clear LT-Memory", size="sm", variant="stop")
 
+        with gr.Row():
+            memory_search_input = gr.Textbox(
+                placeholder="Search memory...",
+                scale=5,
+                container=False,
+                lines=1
+            )
+
+        search_memory_btn = gr.Button("Search", size="sm", scale=1)
+
         gr.Markdown("**Chat History**")
         with gr.Row():
             show_chat_btn = gr.Button("Show Chat-Memory", size="sm")
@@ -57,3 +67,10 @@ def create_memory_panel():
         show_chat_btn, clear_chat_btn,
         full_reset_btn
     )
+
+
+def search_long_term_memory(query: str):
+    """Sucht im Long-Term Memory und gibt Ergebnisse zurück."""
+    if not query or not query.strip():
+        return "Bitte einen Suchbegriff eingeben."
+    return call_mcp_tool("recall_memory", {"query": query.strip(), "limit": 15})

@@ -407,6 +407,8 @@ def wire_memory_panel(
     show_chat_btn,
     clear_chat_btn,
     full_reset_btn,
+    memory_search_input,      
+    search_memory_btn,        
 ):
     """Verdrahtet das Memory-Panel."""
     show_lt_btn.click(get_memories, outputs=[memory_box])
@@ -416,6 +418,13 @@ def wire_memory_panel(
     clear_chat_btn.click(clear_chat_history, outputs=[memory_box])
 
     full_reset_btn.click(full_reset, outputs=[memory_box])
+
+    # === NEU: Memory Search ===
+    search_memory_btn.click(
+        search_long_term_memory,
+        inputs=[memory_search_input],
+        outputs=[memory_box]
+    )
 
 
 def wire_chat_events(
