@@ -74,7 +74,42 @@ def create_memory_panel():
 
 
 def search_long_term_memory(query: str):
-    """Sucht im Long-Term Memory und gibt Ergebnisse zurück."""
-    if not query or not query.strip():
-        return "Bitte einen Suchbegriff eingeben."
-    return call_mcp_tool("recall_memory", {"query": query.strip(), "limit": 15})
+    """Sucht in Long-Term Memory + Chat History (hybride Suche)."""
+    q = (query or "").strip().lower()
+    if not q:
+        return "⚠️ Bitte einen Suchbegriff eingeben."
+
+    results = []
+
+    try:
+        # === 1. Long-Term Memory durchsuchen ===
+        lt_result = call_mcp_tool("recall_memory", {"query": query.strip(), "limit": 10})
+
+        if lt_result and not lt_result.startswith("Error") and "No relevant memories found" not in lt_result:
+            results.append("**🧠 Long-term Memory:**\n" + lt_result)
+        else:
+            # Keyword-Fallback auf alle Long-Term Memories
+            all_lt = call_mcp_tool("list_memories", {})
+            if all_lt and not all_lt.startswith("Error"):
+                matches = [line for line in all_lt.split("\n") if q in line.lower()]
+                if matches:
+                    results.append("**🧠 Long-term Memory (erweitert):**\n" + "\n".join(matches[:10]))
+
+        # === 2. Chat History durchsuchen (wenn gewünscht) ===
+        chat_result = call_mcp_tool("list_chat_history", {"limit": 60, "format": "text"})
+
+        if chat_result and not chat_result.startswith("Error") and "No chat history" not in chat_result:
+            chat_lines = chat_result.split("\n")
+            chat_matches = [line for line in chat_lines if q in line.lower()]
+            if chat_matches:
+                # Nur die relevantesten / letzten Matches nehmen
+                results.append("**💬 Chat History:**\n" + "\n".join(chat_matches[-15:]))
+
+        # === Ergebnis zusammenbauen ===
+        if results:
+            return "\n\n".join(results)
+        else:
+            return f"🔍 Keine Treffer zu „{query.strip()}“ in Long-Term Memory oder Chat History gefunden."
+
+    except Exception as e:
+        return f"❌ Fehler bei der Suche:\n{str(e)}"
